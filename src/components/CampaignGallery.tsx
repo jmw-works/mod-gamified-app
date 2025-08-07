@@ -1,9 +1,10 @@
 // src/components/CampaignGallery.tsx
-import { memo, type CSSProperties } from 'react';
+import { memo, type CSSProperties, useEffect } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import { useCampaigns, type UICampaign } from '../hooks/useCampaigns';
 import { useCampaignThumbnail } from '../hooks/useCampaignThumbnail';
+import { useProgress } from '../context/ProgressContext';
 
 
 // Optional thumbnail props for campaigns
@@ -117,8 +118,29 @@ function CampaignCardView({
 function CampaignGalleryInner() {
   const { user } = useAuthenticator((ctx) => [ctx.user]);
   const userId = user?.userId;
-  const { campaigns, loading } = useCampaigns(userId);
+  const { campaigns, loading, refresh } = useCampaigns(userId);
   const { activeCampaignId, setActiveCampaignId } = useActiveCampaign();
+  const { completedCampaigns } = useProgress();
+
+  // Refresh campaigns whenever progress changes (unlocking new ones)
+  useEffect(() => {
+    refresh();
+  }, [completedCampaigns, refresh]);
+
+  // Ensure active campaign is set to the first unlocked campaign
+  useEffect(() => {
+    if (loading) return;
+    const firstUnlocked = campaigns.find((c) => !c.locked) || null;
+    const current = campaigns.find((c) => c.id === activeCampaignId) || null;
+    if (!firstUnlocked) {
+      setActiveCampaignId(null);
+      return;
+    }
+    if (!current || current.locked) {
+      setActiveCampaignId(firstUnlocked.id);
+    }
+  }, [campaigns, loading, activeCampaignId, setActiveCampaignId]);
+
   if (loading) return <div>Loading campaigns…</div>;
   if (!campaigns?.length) return <div>No campaigns yet.</div>;
 
