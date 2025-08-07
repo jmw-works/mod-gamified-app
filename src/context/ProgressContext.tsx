@@ -128,6 +128,149 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 
         if (!cancelled) {
           setCompletedCampaigns(cpRes.data?.map((c) => c.campaignId) ?? []);
+
+          // After loading server-side progress, merge any guest progress stored locally
+          const guestRaw = localStorage.getItem('guestProgress');
+          if (guestRaw) {
+            try {
+              const guest = JSON.parse(guestRaw);
+
+              // Extract and sanitize guest values
+              const guestXP = typeof guest.xp === 'number' ? guest.xp : 0;
+              const guestAnswered: string[] = Array.isArray(guest.answeredQuestions)
+                ? guest.answeredQuestions.filter((id: unknown): id is string => typeof id === 'string')
+                : [];
+              const guestSections: number[] = Array.isArray(guest.completedSections)
+                ? guest.completedSections.filter((n: unknown): n is number => typeof n === 'number')
+                : [];
+              const guestCampaigns: string[] = Array.isArray(guest.completedCampaigns)
+                ? guest.completedCampaigns.filter((id: unknown): id is string => typeof id === 'string')
+                : [];
+
+              // Determine new merged values and track which items are newly added
+              const prevXP = row.totalXP ?? 0;
+              const mergedXP = prevXP + guestXP;
+
+              const currentAnswered = new Set(
+                (row.answeredQuestions ?? []).filter((id): id is string => typeof id === 'string')
+              );
+              const currentSections = new Set(
+                (row.completedSections ?? []).filter((n): n is number => typeof n === 'number')
+              );
+              const currentCampaigns = new Set(cpRes.data?.map((c) => c.campaignId) ?? []);
+
+              guestAnswered.forEach((id) => currentAnswered.add(id));
+              guestSections.forEach((n) => currentSections.add(n));
+              guestCampaigns.forEach((id) => currentCampaigns.add(id));
+
+              const mergedAnswered = Array.from(currentAnswered);
+              const mergedSections = Array.from(currentSections);
+              const mergedCampaigns = Array.from(currentCampaigns);
+
+              setXP(mergedXP);
+              setAnsweredQuestions(mergedAnswered);
+              setCompletedSections(mergedSections);
+              setCompletedCampaigns(mergedCampaigns);
+
+              // Persist merged user progress
+              await updateUserProgress({
+                id: row.id,
+                totalXP: mergedXP,
+                answeredQuestions: mergedAnswered,
+                completedSections: mergedSections,
+              });
+
+              // Persist section progress details if provided
+              if (guest.sectionProgress && typeof guest.sectionProgress === 'object') {
+                for (const [sectionId, val] of Object.entries(guest.sectionProgress as Record<string, any>)) {
+                  try {
+                    const spRes = await listSectionProgress({
+                      filter: {
+                        and: [
+                          { userId: { eq: userId } },
+                          { sectionId: { eq: sectionId } },
+                        ],
+                      },
+                      selectionSet: ['id', 'answeredQuestionIds', 'correctCount', 'completed'],
+                    });
+                    const rowSP = spRes.data?.[0];
+                    const answered = Array.isArray(val.answeredQuestionIds)
+                      ? val.answeredQuestionIds.filter((id: unknown): id is string => typeof id === 'string')
+                      : [];
+                    const correct = typeof val.correctCount === 'number' ? val.correctCount : 0;
+                    const completed = Boolean(val.completed);
+
+                    if (rowSP) {
+                      const mergedAns = Array.from(
+                        new Set([...(rowSP.answeredQuestionIds ?? []), ...answered])
+                      );
+                      await updateSectionProgress({
+                        id: rowSP.id,
+                        answeredQuestionIds: mergedAns,
+                        correctCount: (rowSP.correctCount ?? 0) + correct,
+                        completed: rowSP.completed || completed,
+                      });
+                    } else {
+                      await createSectionProgress({
+                        userId,
+                        sectionId,
+                        answeredQuestionIds: answered,
+                        correctCount: correct,
+                        completed,
+                      });
+                    }
+                  } catch (err) {
+                    console.warn('Failed to merge section progress', err);
+                  }
+                }
+              }
+
+              // Persist campaign completions if needed
+              const existingCampaigns = new Set(cpRes.data?.map((c) => c.campaignId) ?? []);
+              for (const campaignId of guestCampaigns) {
+                if (!existingCampaigns.has(campaignId)) {
+                  try {
+                    const cRes = await listCampaignProgress({
+                      filter: {
+                        and: [
+                          { userId: { eq: userId } },
+                          { campaignId: { eq: campaignId } },
+                        ],
+                      },
+                      selectionSet: ['id', 'completed'],
+                    });
+                    const existing = cRes.data?.[0];
+                    if (existing && !existing.completed)
+                      await updateCampaignProgress({ id: existing.id, completed: true });
+                    else if (!existing)
+                      await createCampaignProgress({ userId, campaignId, completed: true });
+                  } catch (err) {
+                    console.warn('Failed to merge campaign progress', err);
+                  }
+                }
+              }
+
+              // Emit events to update UI
+              const prevLevel = getLevelFromXP(prevXP, XP_PER_LEVEL);
+              const newLevel = getLevelFromXP(mergedXP, XP_PER_LEVEL);
+              if (newLevel > prevLevel) emit({ type: 'level', level: newLevel, xp: guestXP });
+
+              const newSections = guestSections.filter((s) => !(row.completedSections ?? []).includes(s));
+              newSections.forEach(() => emit({ type: 'section', xp: XP_FOR_SECTION }));
+              const newCampaigns = guestCampaigns.filter(
+                (c) => !cpRes.data?.some((cp) => cp.campaignId === c)
+              );
+              newCampaigns.forEach(() => emit({ type: 'campaign', xp: XP_FOR_CAMPAIGN }));
+
+              localStorage.removeItem('guestProgress');
+              // Optional notification
+              try {
+                window.dispatchEvent(new Event('guestProgressImported'));
+              } catch {}
+            } catch (err) {
+              console.warn('Failed to merge guest progress', err);
+            }
+          }
         }
       } catch (e) {
         console.warn('Failed to load progress', e);
