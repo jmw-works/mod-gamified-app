@@ -12,7 +12,7 @@ import {
 import { useProgress } from '../context/ProgressContext';
 import { useUserProfile } from '../context/UserProfileContext';
 import {
-  XP_PER_LEVEL,
+  xpForLevel,
   getXPWithinLevel,
   calculateXPProgress,
   getXPToNextLevel,
@@ -39,7 +39,6 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
 
   // Prefer saved display name; fall back to username/email
   const loginId = user?.signInDetails?.loginId;
-
   const shownName =
     (typeof profile?.displayName === 'string' && profile.displayName) ||
     user?.username ||
@@ -51,15 +50,22 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
     loginId ||
     'N/A';
 
-  // Per-level math
-  const progressWithinLevel = getXPWithinLevel(safeXP, XP_PER_LEVEL);
-  const levelPercent = calculateXPProgress(progressWithinLevel, XP_PER_LEVEL);
-  const nextLevelIn = getXPToNextLevel(safeXP, XP_PER_LEVEL);
+  // XP calculations
+  const requiredXP = xpForLevel(level);
+  const progressWithinLevel = getXPWithinLevel(safeXP);
+  const levelPercent =
+    level >= 160
+      ? 100
+      : calculateXPProgress(
+          progressWithinLevel,
+          Number.isFinite(requiredXP) ? requiredXP : 1
+        );
+  const nextLevelIn = level >= 160 ? 0 : getXPToNextLevel(safeXP);
 
   const containerStyle = {
     position: 'sticky' as const,
     top: headerHeight + spacing,
-    maxWidth: 'clamp(240px, 50vw, 320px)',
+    maxWidth: '320px',
   };
 
   if (profileLoading)
@@ -76,10 +82,7 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
     );
 
   return (
-    <View
-      padding={spacing}
-      style={containerStyle}
-    >
+    <View padding={spacing} style={containerStyle}>
       <Heading level={3} marginBottom="small">
         User Stats
       </Heading>
@@ -94,19 +97,21 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
       <Flex direction="row" alignItems="center" gap="small" marginBottom="small">
         <Badge variation="info">Level {level}</Badge>
         <Text color={tokens.colors.font.secondary} fontSize="0.9rem">
-          {progressWithinLevel}/{XP_PER_LEVEL} XP this level
+          {progressWithinLevel}/{Number.isFinite(requiredXP) ? requiredXP : '∞'} XP this level
         </Text>
       </Flex>
 
       <XPBar
         percent={levelPercent}
-        label={`Progress to Level ${level + 1}`}
+        label={level >= 160 ? 'Max Level' : `Progress to Level ${level + 1}`}
         title={title}
         fillColor="#e7bb73"
       />
 
       <Text marginTop="xs" color={tokens.colors.font.secondary} fontSize="0.9rem">
-        {nextLevelIn === 0
+        {level >= 160
+          ? 'Maximum level achieved — congrats!'
+          : nextLevelIn === 0
           ? 'Level up ready — keep going!'
           : `Only ${nextLevelIn} XP to reach Level ${level + 1}`}
       </Text>

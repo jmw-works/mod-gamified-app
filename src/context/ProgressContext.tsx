@@ -118,11 +118,8 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         setStreak(row.dailyStreak ?? 0);
         setLastBlazeAt(row.lastBlazeAt ?? null);
 
-        const answered = (row.answeredQuestions ?? []).filter((id): id is string => typeof id === 'string');
-        setAnsweredQuestions(answered);
-
-        const sections = (row.completedSections ?? []).filter((n): n is number => typeof n === 'number');
-        setCompletedSections(sections);
+        setAnsweredQuestions((row.answeredQuestions ?? []).filter((id): id is string => typeof id === 'string'));
+        setCompletedSections((row.completedSections ?? []).filter((n): n is number => typeof n === 'number'));
 
         const cpRes = await listCampaignProgress({
           filter: { and: [{ userId: { eq: userId } }, { completed: { eq: true } }] },
@@ -206,43 +203,6 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     });
   }, [progressId, lastBlazeAt, streak, emit]);
 
-  const markSectionComplete = useCallback(async (section: number, sectionId?: string) => {
-    const alreadyCompleted = completedSections.includes(section);
-    if (!alreadyCompleted) {
-      setCompletedSections((prev) => [...prev, section]);
-      emit({ type: 'section', xp: XP_FOR_SECTION });
-      awardXP(XP_FOR_SECTION);
-    }
-
-    if (progressId) {
-      updateUserProgress({ id: progressId, completedSections: [...completedSections, section] }).catch((e) =>
-        console.warn('Failed to persist section', e)
-      );
-    }
-
-    if (sectionId) {
-      try {
-        const res = await listSectionProgress({
-          filter: {
-            and: [
-              { userId: { eq: userId } },
-              { sectionId: { eq: sectionId } },
-            ],
-          },
-          selectionSet: ['id', 'completed'],
-        });
-        const row = res.data?.[0];
-        if (row) {
-          if (!row.completed) await updateSectionProgress({ id: row.id, completed: true });
-        } else {
-          await createSectionProgress({ userId, sectionId, completed: true });
-        }
-      } catch (e) {
-        console.warn('Failed to persist section progress', e);
-      }
-    }
-  }, [progressId, userId, completedSections, emit, awardXP]);
-
   const markQuestionAnswered = useCallback((questionId: string, sectionId?: string, isCorrect?: boolean) => {
     if (isCorrect) {
       setAnsweredQuestions((prev) => {
@@ -309,6 +269,40 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     }
   }, [answeredQuestions, awardXP, markQuestionAnswered, userId]);
 
+  const markSectionComplete = useCallback(async (section: number, sectionId?: string) => {
+    const alreadyCompleted = completedSections.includes(section);
+    if (!alreadyCompleted) {
+      setCompletedSections((prev) => [...prev, section]);
+      emit({ type: 'section', xp: XP_FOR_SECTION });
+      awardXP(XP_FOR_SECTION);
+    }
+
+    if (progressId) {
+      updateUserProgress({ id: progressId, completedSections: [...completedSections, section] }).catch((e) =>
+        console.warn('Failed to persist section', e)
+      );
+    }
+
+    if (sectionId) {
+      try {
+        const res = await listSectionProgress({
+          filter: {
+            and: [
+              { userId: { eq: userId } },
+              { sectionId: { eq: sectionId } },
+            ],
+          },
+          selectionSet: ['id', 'completed'],
+        });
+        const row = res.data?.[0];
+        if (row && !row.completed) await updateSectionProgress({ id: row.id, completed: true });
+        else if (!row) await createSectionProgress({ userId, sectionId, completed: true });
+      } catch (e) {
+        console.warn('Failed to persist section progress', e);
+      }
+    }
+  }, [progressId, userId, completedSections, emit, awardXP]);
+
   const markCampaignComplete = useCallback(async (campaignId: string) => {
     const alreadyCompleted = completedCampaigns.includes(campaignId);
     if (!alreadyCompleted) {
@@ -362,6 +356,7 @@ export function useProgress() {
 }
 
 export default ProgressContext;
+
 
 
 

@@ -125,3 +125,4 @@ export default function AnnouncementBanner({ onLevelUp, onDismiss }: Announcemen
     </Card>
   );
 }
+
