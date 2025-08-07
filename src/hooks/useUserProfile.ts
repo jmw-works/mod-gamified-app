@@ -1,11 +1,13 @@
 // src/hooks/useUserProfile.ts
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource'; // <- make sure this path is correct
+import {
+  listUserProfiles,
+  createUserProfile,
+  updateUserProfile,
+} from '../services/userProfileService';
 
 type UserProfileModel = Schema['UserProfile']['type'];
-
-const client = generateClient<Schema>(); // <- typed client; exposes client.models.UserProfile
 
 export function useUserProfile(userId?: string, email?: string | null) {
   const [profile, setProfile] = useState<UserProfileModel | null>(null);
@@ -22,7 +24,7 @@ export function useUserProfile(userId?: string, email?: string | null) {
       setLoading(true);
       setError(null);
       try {
-        const res = await client.models.UserProfile.list({
+        const res = await listUserProfiles({
           filter: { userId: { eq: userId! } },
         });
         const first = (res?.data ?? [])[0] ?? null;
@@ -47,19 +49,27 @@ export function useUserProfile(userId?: string, email?: string | null) {
       try {
         if (profile?.id) {
           // Update existing profile
-          const updated = await client.models.UserProfile.update({
-            id: profile.id,
-            displayName,
-          });
-          setProfile((updated as any)?.data ?? updated ?? profile);
+            const updated = await updateUserProfile({
+              id: profile.id,
+              displayName,
+            });
+            const updatedProfile =
+              (updated as unknown as { data?: UserProfileModel }).data ??
+              (updated as unknown as UserProfileModel) ??
+              profile;
+            setProfile(updatedProfile);
         } else {
           // Create first-time profile
-          const created = await client.models.UserProfile.create({
-            userId: userId!,                 // required by your schema
-            email: (email ?? null) as any,   // many schemas use Nullable<string>
-            displayName,
-          });
-          setProfile((created as any)?.data ?? created ?? null);
+            const created = await createUserProfile({
+              userId: userId!,                 // required by your schema
+              email: email ?? null,            // many schemas use Nullable<string>
+              displayName,
+            });
+            const createdProfile =
+              (created as unknown as { data?: UserProfileModel }).data ??
+              (created as unknown as UserProfileModel) ??
+              null;
+            setProfile(createdProfile);
         }
       } catch (e) {
         setError(e as Error);
@@ -67,7 +77,7 @@ export function useUserProfile(userId?: string, email?: string | null) {
         setLoading(false);
       }
     },
-    [profile?.id, hasIdentity, userId, email]
+    [profile, hasIdentity, userId, email]
   );
 
   return useMemo(

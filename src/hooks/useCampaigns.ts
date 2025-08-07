@@ -1,9 +1,11 @@
 // src/hooks/useCampaigns.ts
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../amplify/data/resource';
-
-const client = generateClient<Schema>();
+import { useEffect, useState, useCallback } from 'react';
+import { listCampaigns } from '../services/campaignService';
+import {
+  listCampaignProgress,
+  createCampaignProgress,
+  updateCampaignProgress,
+} from '../services/progressService';
 
 export type UICampaign = {
   id: string;
@@ -26,7 +28,7 @@ export function useCampaigns(userId?: string | null) {
     setErr(null);
     try {
       // 1) fetch all active campaigns
-      const cRes = await client.models.Campaign.list({
+      const cRes = await listCampaigns({
         selectionSet: ['id', 'title', 'description', 'thumbnailUrl', 'order', 'isActive'],
       });
       const raw = (cRes.data ?? [])
@@ -34,9 +36,9 @@ export function useCampaigns(userId?: string | null) {
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
       // 2) fetch user campaign progress
-      let completedIds = new Set<string>();
+      const completedIds = new Set<string>();
       if (userId) {
-        const pRes = await client.models.CampaignProgress.list({
+        const pRes = await listCampaignProgress({
           filter: { userId: { eq: userId } },
           selectionSet: ['id', 'campaignId', 'completed'],
         });
@@ -85,17 +87,17 @@ export function useCampaigns(userId?: string | null) {
   const markCampaignCompleted = useCallback(async (campaignId: string) => {
     if (!userId) return;
     // upsert: try to find existing row
-    const list = await client.models.CampaignProgress.list({
+    const list = await listCampaignProgress({
       filter: { userId: { eq: userId }, campaignId: { eq: campaignId } },
       selectionSet: ['id', 'completed'],
     });
     const row = list.data?.[0] ?? null;
     if (row) {
       if (!row.completed) {
-        await client.models.CampaignProgress.update({ id: row.id, completed: true });
+        await updateCampaignProgress({ id: row.id, completed: true });
       }
     } else {
-      await client.models.CampaignProgress.create({ userId, campaignId, completed: true });
+      await createCampaignProgress({ userId, campaignId, completed: true });
     }
     await load(); // refresh gallery lock state
   }, [userId, load]);

@@ -1,11 +1,18 @@
 // src/hooks/useCampaignQuizData.ts
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useAmplifyClient } from './useAmplifyClient';
 import type {
   Question as QuestionUI,
   HandleAnswer,
   SubmitArgs,
 } from '../types/QuestionTypes';
+import { listSections } from '../services/sectionService';
+import { listQuestions } from '../services/questionService';
+import {
+  listSectionProgress,
+  createSectionProgress,
+  updateSectionProgress,
+  updateUserProgress,
+} from '../services/progressService';
 
 type ProgressShape = {
   id: string;
@@ -22,17 +29,15 @@ function startOfDay(d: Date) {
   t.setHours(0, 0, 0, 0);
   return t;
 }
-function toStringArray(a: (string | null | undefined)[] | null | undefined): string[] {
-  return (a ?? []).filter((x): x is string => typeof x === 'string');
-}
 function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
   if (ids.length === 0) return undefined;
-  if (ids.length === 1) return { [fieldName]: { eq: ids[0] } } as any;
-  return { or: ids.map((id) => ({ [fieldName]: { eq: id } })) } as any;
+  if (ids.length === 1) return { [fieldName]: { eq: ids[0] } } as Record<string, unknown>;
+  return {
+    or: ids.map((id) => ({ [fieldName]: { eq: id } })),
+  } as Record<string, unknown>;
 }
 
 export function useCampaignQuizData(userId: string, activeCampaignId?: string | null) {
-  const client = useAmplifyClient();
   const [questions, setQuestions] = useState<QuestionUI[]>([]);
   const [progressBase, setProgressBase] = useState<Omit<ProgressShape, 'completedSections'> | null>(null);
   const [completedSectionNumbers, setCompletedSectionNumbers] = useState<number[]>([]);
@@ -56,7 +61,7 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
       setLoading(true);
       setErr(null);
       try {
-        const sRes = await client.models.Section.list({
+        const sRes = await listSections({
           filter: { campaignId: { eq: campaignId } },
           selectionSet: ['id', 'number', 'order', 'educationalText', 'isActive'],
         });
@@ -93,7 +98,7 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
         }
 
         const qFilter = buildOrIdFilter('sectionId', sectionIds);
-        const qRes = await client.models.Question.list({
+        const qRes = await listQuestions({
           ...(qFilter ? { filter: qFilter } : {}),
           selectionSet: [
             'id', 'text', 'section', 'xpValue', 'sectionRef.number',
@@ -101,21 +106,31 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
           ],
         });
 
-        const qs: QuestionUI[] = (qRes.data ?? []).map((q: any) => ({
-          id: q.id,
-          text: q.text,
-          section: (q.section ?? q.sectionRef?.number ?? 0) as number,
-          xpValue: q.xpValue ?? 10,
-          answers: (q.answers ?? []).map((a: any) => ({
-            id: a.id,
-            content: a.content,
-            isCorrect: !!a.isCorrect,
-          })),
-        }));
+        const qs: QuestionUI[] = (qRes.data ?? []).map((q) => {
+          const row = q as unknown as {
+            id: string;
+            text: string;
+            section?: number | null;
+            sectionRef?: { number?: number | null } | null;
+            xpValue?: number | null;
+            answers?: { id: string; content: string; isCorrect?: boolean | null }[];
+          };
+          return {
+            id: row.id,
+            text: row.text,
+            section: (row.section ?? row.sectionRef?.number ?? 0) as number,
+            xpValue: row.xpValue ?? 10,
+            answers: (row.answers ?? []).map((ans) => ({
+              id: ans.id,
+              content: ans.content,
+              isCorrect: !!ans.isCorrect,
+            })),
+          };
+        });
         if (!cancelled) setQuestions(qs);
 
         const spBaseFilter = buildOrIdFilter('sectionId', sectionIds);
-        const spRes = await client.models.SectionProgress.list({
+        const spRes = await listSectionProgress({
           filter: spBaseFilter ? { and: [{ userId: { eq: userId } }, spBaseFilter] } : { userId: { eq: userId } },
           selectionSet: ['sectionId', 'completed'],
         });
@@ -149,7 +164,7 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
     return () => {
       cancelled = true;
     };
-  }, [activeCampaignId, userId, client]);
+  }, [activeCampaignId, userId]);
 
   // Progress loading and handleAnswer remain unchanged...
 
@@ -196,17 +211,17 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
 
       const sectionId = sectionIdByNumber.get(sectionNum);
       if (sectionId) {
-        const list = await client.models.SectionProgress.list({
+        const list = await listSectionProgress({
           filter: { and: [{ userId: { eq: userId } }, { sectionId: { eq: sectionId } }] },
           selectionSet: ['id', 'completed'],
         });
         const row = list.data?.[0] ?? null;
         if (row) {
           if (row.completed !== allAnswered) {
-            await client.models.SectionProgress.update({ id: row.id, completed: allAnswered });
+            await updateSectionProgress({ id: row.id, completed: allAnswered });
           }
         } else {
-          await client.models.SectionProgress.create({ userId, sectionId, completed: allAnswered });
+          await createSectionProgress({ userId, sectionId, completed: allAnswered });
         }
       }
 
@@ -241,7 +256,7 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
     setProgressBase(optimisticBase);
 
     try {
-      await client.models.UserProgress.update({
+      await updateUserProgress({
         id: progressBase.id,
         totalXP: newXP,
         answeredQuestions: newAnswered,
@@ -258,7 +273,6 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
     sectionToIds,
     sectionIdByNumber,
     pushCompletedSection,
-    client,
   ]);
 
   const uiProgress: ProgressShape | null = useMemo(() => {
