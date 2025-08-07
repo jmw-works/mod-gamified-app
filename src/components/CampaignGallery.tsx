@@ -1,12 +1,12 @@
 // src/components/CampaignGallery.tsx
-import { memo, useEffect, useRef } from 'react';
+import { memo, useContext, useEffect, useRef } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import styles from './CampaignGallery.module.css';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import { useCampaigns, type UICampaign } from '../hooks/useCampaigns';
 import { useCampaignThumbnail } from '../hooks/useCampaignThumbnail';
-import { useProgress } from '../context/ProgressContext';
+import ProgressContext from '../context/ProgressContext';
 
 
 // Optional thumbnail props for campaigns
@@ -69,7 +69,8 @@ function CampaignGalleryInner() {
   const userId = user?.userId;
   const { campaigns, loading, error, refresh } = useCampaigns(userId);
   const { activeCampaignId, setActiveCampaignId } = useActiveCampaign();
-  const { completedCampaigns } = useProgress();
+  const progress = useContext(ProgressContext);
+  const completedCampaigns = progress?.completedCampaigns;
   const galleryRef = useRef<HTMLDivElement>(null);
 
   const scrollBy = (offset: number) => {

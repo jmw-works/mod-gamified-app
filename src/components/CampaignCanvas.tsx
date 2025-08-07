@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
-import { useProgress } from '../context/ProgressContext';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
-import { useUserProfile } from '../context/UserProfileContext';
+import ProgressContext from '../context/ProgressContext';
+import UserProfileContext from '../context/UserProfileContext';
 import { listCampaigns } from '../services/campaignService';
 
 interface CampaignCanvasProps {
@@ -25,15 +25,15 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     sectionIdByNumber,
   } = useCampaignQuizData(campaignId);
 
-  const {
-    handleAnswer,
-    markSectionComplete,
-    markCampaignComplete,
-    answeredQuestions,
-    completedSections,
-  } = useProgress();
+  const progress = useContext(ProgressContext);
+  const handleAnswer = progress?.handleAnswer;
+  const markSectionComplete = progress?.markSectionComplete;
+  const markCampaignComplete = progress?.markCampaignComplete;
+  const answeredQuestions = progress?.answeredQuestions ?? [];
+  const completedSections = progress?.completedSections ?? [];
 
-  const { profile } = useUserProfile();
+  const userProfile = useContext(UserProfileContext);
+  const profile = userProfile?.profile ?? null;
 
   const [index, setIndex] = useState(0);
   const [response, setResponse] = useState('');
@@ -94,7 +94,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       userAnswer.toLowerCase() ===
       current.correctAnswer?.trim().toLowerCase();
 
-    await handleAnswer({
+    await handleAnswer?.({
       questionId: current.id,
       userAnswer,
       isCorrect,
@@ -111,14 +111,14 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
 
       if (allAnswered && current.section != null) {
         const secId = sectionIdByNumber.get(current.section);
-        markSectionComplete(current.section, secId);
+        markSectionComplete?.(current.section, secId);
 
         const completed = new Set(completedSections);
         completed.add(current.section);
 
         const allSections = new Set(questions.map((q) => q.section));
         if ([...allSections].every((n) => completed.has(n))) {
-          markCampaignComplete(campaignId);
+          markCampaignComplete?.(campaignId);
         }
       }
 
