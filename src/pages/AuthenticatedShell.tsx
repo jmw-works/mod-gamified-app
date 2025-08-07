@@ -7,27 +7,27 @@ import QuizSection from '../components/QuizSection';
 import LevelUpBanner from '../components/LevelUpBanner';
 import UserStatsPanel from '../components/UserStatsPanel';
 import { SetDisplayNameModal } from '../components/SetDisplayNameModal';
+import CampaignGallery from '../components/CampaignGallery';
 
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { useCampaigns } from '../hooks/useCampaigns';
+import { useActiveCampaign } from '../hooks/useActiveCampaign';
+import { calculateXPProgress } from '../utils/xp';
 import { ProgressProvider } from '../context/ProgressContext';
 
 export default function AuthenticatedShell() {
-  const { user, signOut, authStatus } = useAuthenticator((ctx) => [
-    ctx.user,
-    ctx.authStatus,
-  ]);
+  const { user, signOut, authStatus } = useAuthenticator((ctx) => [ctx.user, ctx.authStatus]);
   const userId = user?.userId ?? '';
 
   const [attrs, setAttrs] = useState<Record<string, string> | null>(null);
   const [attrsError, setAttrsError] = useState<Error | null>(null);
-
-  const { campaigns, error: campaignsError } = useCampaigns(userId);
-  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
+
+  const { campaigns, loading: campaignsLoading, error: campaignsError } = useCampaigns(userId);
+  const { activeCampaignId, setActiveCampaignId } = useActiveCampaign();
 
   const headerRef = useRef<HTMLDivElement>(null);
   const headerHeight = useHeaderHeight(headerRef);
@@ -41,7 +41,6 @@ export default function AuthenticatedShell() {
     orderedSectionNumbers,
     sectionTextByNumber,
   } = useCampaignQuizData(userId, activeCampaignId);
-
 
   const emailFromAttrs: string | null = attrs?.email ?? null;
 
@@ -64,8 +63,6 @@ export default function AuthenticatedShell() {
       mounted = false;
     };
   }, [authStatus]);
-
-  // campaigns are loaded via useCampaigns hook
 
   const displayName = useMemo(() => {
     const fromProfile = (profile?.displayName ?? '').trim();
@@ -107,17 +104,23 @@ export default function AuthenticatedShell() {
     };
   }, [progress, userId]);
 
+  const currentXP = safeProgress.totalXP;
+  const maxXP = 100;
+  const percentage = calculateXPProgress(currentXP, maxXP);
+  const bountiesCompleted = safeProgress.completedSections?.length ?? 0;
+  const streak = safeProgress.dailyStreak ?? 0;
+
+  const mergedError = profileError ?? quizError ?? campaignsError ?? attrsError ?? null;
+
   const completedCampaignIds = useMemo(
     () => campaigns.filter((c) => c.completed).map((c) => c.id),
     [campaigns]
   );
 
-  const mergedError = profileError ?? quizError ?? campaignsError ?? attrsError ?? null;
-
   const onSelectCampaign = useCallback((id: string, locked?: boolean) => {
     if (locked) return;
     setActiveCampaignId(id);
-  }, []);
+  }, [setActiveCampaignId]);
 
   const groupedBySection = useMemo(() => {
     const map = new Map<number, ReturnType<typeof questions.filter>>();
@@ -138,12 +141,23 @@ export default function AuthenticatedShell() {
       initialCompletedCampaigns={completedCampaignIds}
     >
       <>
-        <Header ref={headerRef} signOut={signOut} />
+        <Header
+          ref={headerRef}
+          signOut={signOut}
+          currentXP={currentXP}
+          maxXP={maxXP}
+          bountiesCompleted={bountiesCompleted}
+          streakDays={streak}
+        />
 
         <main>
           {showBanner && (
             <div style={{ padding: '0 50px' }}>
-              <LevelUpBanner onDismiss={() => setShowBanner(false)} />
+              <LevelUpBanner
+                currentXP={currentXP}
+                maxXP={maxXP}
+                onDismiss={() => setShowBanner(false)}
+              />
             </div>
           )}
 
@@ -153,91 +167,28 @@ export default function AuthenticatedShell() {
             </div>
           )}
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 24,
-              padding: `0 ${spacing}px`,
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24, padding: `0 ${spacing}px` }}>
             {!activeCampaignId && (
-              <div style={{ width: 260, display: 'flex', flexDirection: 'column', gap: 24 }}>
-                {campaigns.length > 0 ? (
-                  campaigns.map((campaign) => {
-                    const imgUrl = campaign.thumbnailUrl ?? '';
-                    return (
-                      <div
-                        key={campaign.id}
-                        onClick={() => onSelectCampaign(campaign.id, campaign.locked)}
-                        style={{
-                          opacity: campaign.locked ? 0.4 : 1,
-                          cursor: campaign.locked ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center',
-                        }}
-                        title={campaign.description || ''}
-                      >
-                        {imgUrl ? (
-                          <img
-                            src={imgUrl}
-                            alt={campaign.title}
-                            width={200}
-                            height={200}
-                            style={{ objectFit: 'contain', marginBottom: 12 }}
-                          />
-                        ) : (
-                          <div
-                            style={{ width: 180, height: 200, background: '#eee', marginBottom: 12 }}
-                          />
-                        )}
-                        <Text fontSize="1rem">{campaign.title}</Text>
-                      </div>
-                    );
-                  })
-                ) : (
-                  ['campaign1.png', 'campaign2.png', 'campaign3.png'].map((filename, idx) => (
-                    <div
-                      key={`fallback-${idx}`}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        textAlign: 'center',
-                        cursor: 'default',
-                      }}
-                    >
-                      <img
-                        src={`/${filename}`}
-                        alt={`Fallback ${idx + 1}`}
-                        width={200}
-                        height={200}
-                        style={{ objectFit: 'contain', marginBottom: 12 }}
-                      />
-                      <Text fontSize="1rem" color="#888">
-                        Coming Soon
-                      </Text>
-                    </div>
-                  ))
-                )}
-              </div>
+              <CampaignGallery
+                campaigns={campaigns}
+                loading={campaignsLoading}
+                activeCampaignId={activeCampaignId}
+                onSelect={onSelectCampaign}
+              />
             )}
 
             <div style={{ flex: 2 }}>
               <div style={{ marginBottom: 16, textAlign: 'center' }}>
                 <Heading level={2}>Hey {displayName}! Let&apos;s jump in.</Heading>
                 <Text fontSize="1rem" style={{ marginTop: 8, color: '#444' }}>
-                  Discover a world of learning and adventure as you hone your treasure hunting
-                  skills.
+                  Discover a world of learning and adventure as you hone your treasure hunting skills.
                 </Text>
                 <img
                   src="/adventure_is_out_there.png"
                   alt="Adventure is out there"
                   style={{
                     marginTop: 24,
-                    width: '85%', // 15% smaller than full width
+                    width: '85%',
                     maxWidth: 600,
                     height: 'auto',
                   }}
@@ -272,6 +223,9 @@ export default function AuthenticatedShell() {
                 username: user?.username,
                 attributes: { name: displayName, email: emailFromAttrs ?? undefined },
               }}
+              currentXP={currentXP}
+              maxXP={maxXP}
+              percentage={percentage}
               headerHeight={headerHeight}
               spacing={spacing}
             />
@@ -285,6 +239,7 @@ export default function AuthenticatedShell() {
     </ProgressProvider>
   );
 }
+
 
 
 
