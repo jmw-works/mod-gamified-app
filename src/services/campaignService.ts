@@ -1,18 +1,20 @@
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../amplify/data/resource';
 import { ServiceError } from './serviceError';
-
-const client = generateClient<Schema>();
+import { client } from './client';
 
 export async function listCampaigns(
   options: Parameters<typeof client.models.Campaign.list>[0] = {}
 ) {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const baseSelection = (options as any).selectionSet ?? [];
     const selection = Array.from(
-      new Set([...(options?.selectionSet ?? []), 'infoText'])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      new Set([...(baseSelection as any[]), 'infoText'])
     );
-    return await client.models.Campaign.list({
-      ...options,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return await (client.models.Campaign.list as any)({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ...(options as any),
       selectionSet: selection,
     });
   } catch (err) {

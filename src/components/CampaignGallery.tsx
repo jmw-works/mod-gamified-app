@@ -30,13 +30,13 @@ function CampaignCardView({
     fallbackUrl: c.thumbnailUrl ?? undefined,
   });
 
-  return (
-    <div
-      role="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={`${styles.card} ${active ? styles.cardActive : ''}`}
-    >
+    return (
+      <button
+        type="button"
+        aria-pressed={active}
+        onClick={onClick}
+        className={`${styles.card} ${active ? styles.cardActive : ''}`}
+      >
       {/* Thumbnail */}
       {url ? (
         <img
@@ -61,9 +61,9 @@ function CampaignCardView({
           <p className={styles.cardDescription}>{c.description}</p>
         ) : null}
       </div>
-    </div>
-  );
-}
+      </button>
+    );
+  }
 
 function CampaignGalleryInner() {
   const { user } = useAuthenticator((ctx) => [ctx.user]);
