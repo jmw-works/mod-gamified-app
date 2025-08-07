@@ -25,3 +25,24 @@
 .canvasArea {
   grid-area: canvas;
 }
+
+@media (max-width: 1024px) {
+  .shellGrid {
+    grid-template-areas:
+      "header header"
+      "banner banner"
+      "gallery canvas";
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .shellGrid {
+    grid-template-areas:
+      "header"
+      "banner"
+      "gallery"
+      "canvas";
+    grid-template-columns: 1fr;
+  }
+}

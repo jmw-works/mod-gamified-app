@@ -3,6 +3,13 @@
   --amplify-fonts-default-variable: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   --amplify-fonts-default-static: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 
+  /* Space tokens */
+  --amplify-space-xxs: 4px;
+  --amplify-space-xs: 8px;
+  --amplify-space-sm: 12px;
+  --amplify-space-md: 16px;
+  --amplify-space-lg: 24px;
+
   /* Color tokens */
   --amplify-colors-background-primary: #f8f9fa;
   --amplify-colors-font-primary: #111827;

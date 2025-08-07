@@ -13,23 +13,18 @@ export function useHeaderHeight(ref: RefObject<HTMLElement | null>, defaultHeigh
 
     updateHeight();
 
-    const observer = new MutationObserver(updateHeight);
+    const observer = new ResizeObserver(updateHeight);
     if (ref.current) {
-      observer.observe(ref.current, { childList: true, subtree: true, attributes: true });
+      observer.observe(ref.current);
     }
 
     window.addEventListener('resize', updateHeight);
     window.addEventListener('load', updateHeight);
 
-    const interval = setInterval(updateHeight, 200);
-    const timeout = setTimeout(() => clearInterval(interval), 2000);
-
     return () => {
       observer.disconnect();
       window.removeEventListener('resize', updateHeight);
       window.removeEventListener('load', updateHeight);
-      clearInterval(interval);
-      clearTimeout(timeout);
     };
   }, [ref]);
 
