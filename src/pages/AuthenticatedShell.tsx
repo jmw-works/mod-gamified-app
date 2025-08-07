@@ -1,5 +1,5 @@
 // src/pages/AuthenticatedShell.tsx
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { fetchUserAttributes } from 'aws-amplify/auth';
 
@@ -16,6 +16,7 @@ import { ProgressProvider } from '../context/ProgressContext';
 import { ActiveCampaignProvider } from '../context/ActiveCampaignContext';
 import { UserProfileProvider } from '../context/UserProfileContext';
 import DisplayNamePrompt from '../components/DisplayNamePrompt';
+import './AuthenticatedShell.css';
 
 export default function AuthenticatedShell() {
   const { user, signOut, authStatus } = useAuthenticator((ctx) => [ctx.user, ctx.authStatus]);
@@ -43,41 +44,29 @@ export default function AuthenticatedShell() {
   const headerHeight = useHeaderHeight(headerRef);
   const spacing = 24;
 
-  const gridStyle = useMemo(
-    () => ({
-      display: 'grid',
-      gridTemplateAreas: `"header header header" "banner banner banner" "gallery canvas stats"`,
-      gridTemplateColumns: '1fr 2fr 1fr',
-      gridAutoRows: 'auto',
-      minHeight: '100vh',
-      gap: spacing,
-    }),
-    [spacing]
-  );
-
   return (
     <UserProfileProvider userId={userId} email={emailFromAttrs}>
       <ActiveCampaignProvider>
         <ProgressProvider userId={userId}>
           <DisplayNamePrompt />
-          <div style={gridStyle}>
-            <div style={{ gridArea: 'header' }}>
+          <div className="authenticated-grid">
+            <div className="auth-header">
               <HeaderBar ref={headerRef} signOut={signOut} />
             </div>
 
-            <div style={{ gridArea: 'banner' }}>
+            <div className="auth-banner">
               <AnnouncementBanner />
             </div>
 
-            <div style={{ gridArea: 'gallery' }}>
+            <div className="auth-gallery">
               <CampaignGallery campaigns={campaigns} loading={campaignsLoading} />
             </div>
 
-            <div style={{ gridArea: 'canvas' }}>
+            <div className="auth-canvas">
               <CampaignCanvas userId={userId} />
             </div>
 
-            <div style={{ gridArea: 'stats' }}>
+            <div className="auth-stats">
               <UserStatsPanelWithProfile
                 username={user?.username}
                 email={emailFromAttrs ?? undefined}
