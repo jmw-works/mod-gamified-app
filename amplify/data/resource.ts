@@ -144,6 +144,18 @@ const schema = a.schema({
       allow.owner().to(['create', 'read', 'update', 'delete']),
     ]),
 
+  UserResponse: a
+    .model({
+      id: a.id().required(),
+      userId: a.string().required(),
+      questionId: a.id().required(),
+      responseText: a.string(),
+      isCorrect: a.boolean().default(false),
+    })
+    .authorization((allow) => [
+      allow.owner().to(['create', 'read', 'update', 'delete']),
+    ]),
+
   // Optional legacy model
   UserStats: a
     .model({

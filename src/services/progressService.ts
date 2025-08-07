@@ -96,3 +96,24 @@ export async function updateUserProgress(
     throw new ServiceError('Failed to update user progress', { cause: err });
   }
 }
+
+// UserResponse
+export async function createUserResponse(
+  input: Parameters<typeof client.models.UserResponse.create>[0]
+) {
+  try {
+    return await client.models.UserResponse.create(input);
+  } catch (err) {
+    throw new ServiceError('Failed to create user response', { cause: err });
+  }
+}
+
+export async function listUserResponses(
+  options?: Parameters<typeof client.models.UserResponse.list>[0]
+) {
+  try {
+    return await client.models.UserResponse.list(options);
+  } catch (err) {
+    throw new ServiceError('Failed to list user responses', { cause: err });
+  }
+}
