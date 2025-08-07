@@ -15,20 +15,16 @@ export default function App() {
 
 function AppContent() {
   const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
-  const [loginTriggered, setLoginTriggered] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
 
   if (authStatus === 'authenticated') {
     return <AuthenticatedShell />;
   }
 
-  if (!loginTriggered) {
-    return <PublicShell onRequireAuth={() => setLoginTriggered(true)} />;
+  if (showAuth) {
+    return <Authenticator />;
   }
 
-  return (
-    <Authenticator>
-      <AuthenticatedShell />
-    </Authenticator>
-  );
+  return <PublicShell onRequireAuth={() => setShowAuth(true)} />;
 }
 
