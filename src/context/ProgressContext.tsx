@@ -56,6 +56,9 @@ interface ProviderProps {
 }
 
 const XP_PER_LEVEL = 100;
+// XP bonuses for completing major milestones
+const SECTION_COMPLETION_XP = 50;
+const CAMPAIGN_COMPLETION_XP = 200;
 type UserProgressModel = Schema['UserProgress']['type'];
 
 function startOfDay(d: Date) {
@@ -174,8 +177,13 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 
   const markSectionComplete = useCallback(
     async (section: number, sectionId?: string) => {
+      let alreadyCompleted = completedSections.includes(section);
+
       setCompletedSections((prev) => {
-        if (prev.includes(section)) return prev;
+        if (prev.includes(section)) {
+          alreadyCompleted = true;
+          return prev;
+        }
         const updated = [...prev, section];
         if (progressId) {
           updateUserProgress({
@@ -201,6 +209,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
           if (row) {
             if (!row.completed)
               await updateSectionProgress({ id: row.id, completed: true });
+            else alreadyCompleted = true;
           } else {
             await createSectionProgress({
               userId,
@@ -212,8 +221,12 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
           console.warn('Failed to persist section progress', e);
         }
       }
+
+      if (!alreadyCompleted) {
+        awardXP(SECTION_COMPLETION_XP);
+      }
     },
-    [progressId, userId]
+    [progressId, userId, completedSections, awardXP]
   );
 
   const markQuestionAnswered = useCallback(
@@ -307,9 +320,15 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 
   const markCampaignComplete = useCallback(
     async (campaignId: string) => {
-      setCompletedCampaigns((prev) =>
-        prev.includes(campaignId) ? prev : [...prev, campaignId]
-      );
+      let alreadyCompleted = completedCampaigns.includes(campaignId);
+
+      setCompletedCampaigns((prev) => {
+        if (prev.includes(campaignId)) {
+          alreadyCompleted = true;
+          return prev;
+        }
+        return [...prev, campaignId];
+      });
       try {
         const res = await listCampaignProgress({
           filter: {
@@ -324,6 +343,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         if (row) {
           if (!row.completed)
             await updateCampaignProgress({ id: row.id, completed: true });
+          else alreadyCompleted = true;
         } else {
           await createCampaignProgress({ userId, campaignId, completed: true });
         }
@@ -332,8 +352,12 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
       } finally {
         window.dispatchEvent(new Event('campaignProgressChanged'));
       }
+
+      if (!alreadyCompleted) {
+        awardXP(CAMPAIGN_COMPLETION_XP);
+      }
     },
-    [userId]
+    [userId, completedCampaigns, awardXP]
   );
 
   const listeners = useRef(new Set<ProgressListener>());
