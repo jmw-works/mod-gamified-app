@@ -1,7 +1,7 @@
 // src/components/CampaignGallery.tsx
-import { memo, type CSSProperties, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import './CampaignGallery.css';
+import styles from './CampaignGallery.module.css';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import { useCampaigns, type UICampaign } from '../hooks/useCampaigns';
@@ -13,53 +13,6 @@ import { useProgress } from '../context/ProgressContext';
 type CampaignCard = UICampaign & {
   thumbnailKey?: string | null;
   thumbnailAlt?: string | null;
-};
-
-const containerStyle: CSSProperties = {
-  width: 'clamp(180px, 80vw, 100%)',
-};
-
-const cardStyle: CSSProperties = {
-  width: 'clamp(180px, 40vw, 240px)',
-  flex: '0 0 auto',
-  borderRadius: 12,
-  border: '1px solid #E5E7EB',
-  boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-  background: '#fff',
-  cursor: 'pointer',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-};
-
-const thumbStyle: CSSProperties = {
-  width: '100%',
-  height: 'clamp(100px, 20vw, 160px)',
-  objectFit: 'cover',
-  background: '#F3F4F6',
-};
-
-const contentStyle: CSSProperties = {
-  padding: '10px 12px',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-};
-
-const titleStyle: CSSProperties = {
-  fontSize: 16,
-  fontWeight: 600,
-  margin: 0,
-};
-
-const descStyle: CSSProperties = {
-  fontSize: 13,
-  color: '#4B5563',
-  margin: 0,
-  display: '-webkit-box',
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: 'vertical',
-  overflow: 'hidden',
 };
 
 function CampaignCardView({
@@ -81,32 +34,31 @@ function CampaignCardView({
       role="button"
       aria-pressed={active}
       onClick={onClick}
-      style={{
-        ...cardStyle,
-        outline: active ? '2px solid #2563EB' : 'none',
-      }}
+      className={`${styles.card} ${active ? styles.cardActive : ''}`}
     >
       {/* Thumbnail */}
       {url ? (
         <img
           src={url}
           alt={c.thumbnailAlt ?? `${c.title} thumbnail`}
-          style={thumbStyle}
+          className={styles.thumb}
           draggable={false}
         />
       ) : (
-        <div style={{ ...thumbStyle, display: 'grid', placeItems: 'center', color: '#9CA3AF' }}>
+        <div className={`${styles.thumb} ${styles.thumbPlaceholder}`}>
           No image
         </div>
       )}
 
       {/* Content */}
-      <div style={contentStyle}>
-        <h4 style={titleStyle}>
+      <div className={styles.cardContent}>
+        <h4 className={styles.cardTitle}>
           {c.title}
           {c.locked ? ' 🔒' : ''}
         </h4>
-        {c.description ? <p style={descStyle}>{c.description}</p> : null}
+        {c.description ? (
+          <p className={styles.cardDescription}>{c.description}</p>
+        ) : null}
       </div>
     </div>
   );
@@ -148,17 +100,16 @@ function CampaignGalleryInner() {
   if (!campaigns?.length) return <div>No campaigns yet.</div>;
 
   return (
-    <div className="gallery-wrapper">
+    <div className={styles.galleryWrapper}>
       <button
-        className="gallery-nav-button"
+        className={styles.galleryNavButton}
         aria-label="Scroll left"
         onClick={() => scrollBy(-240)}
       >
         <FaChevronLeft />
       </button>
       <div
-        className="campaign-gallery"
-        style={containerStyle}
+        className={styles.campaignGallery}
         ref={galleryRef}
         tabIndex={0}
       >
@@ -172,7 +123,7 @@ function CampaignGalleryInner() {
         ))}
       </div>
       <button
-        className="gallery-nav-button"
+        className={styles.galleryNavButton}
         aria-label="Scroll right"
         onClick={() => scrollBy(240)}
       >

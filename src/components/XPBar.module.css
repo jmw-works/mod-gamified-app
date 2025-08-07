@@ -1,0 +1,29 @@
+.container {
+  width: 100%;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-xxs, 6px);
+}
+
+.labelRight {
+  display: flex;
+  gap: var(--space-xs, 8px);
+}
+
+.track {
+  width: 100%;
+  height: var(--xpbar-height, 12px);
+  background: var(--xpbar-track-bg, #e5e7eb);
+  border-radius: var(--xpbar-radius, 4px);
+  overflow: hidden;
+}
+
+.fill {
+  width: var(--xpbar-percent, 0%);
+  height: 100%;
+  background: var(--xpbar-fill, #e7bb73);
+  transition: width 450ms ease;
+}

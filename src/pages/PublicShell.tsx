@@ -1,43 +1,29 @@
 // src/pages/PublicShell.tsx
-import { useMemo } from 'react';
-
 import { ActiveCampaignProvider } from '../context/ActiveCampaignContext';
 import { Header as HeaderBar } from '../components/Header';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import CampaignGallery from '../components/CampaignGallery';
 import CampaignCanvas from '../components/CampaignCanvas';
+import styles from './PublicShell.module.css';
 
 interface PublicShellProps {
   onRequireAuth: () => void;
 }
 
 export default function PublicShell({ onRequireAuth }: PublicShellProps) {
-  const spacing = 24;
-  const gridStyle = useMemo(
-    () => ({
-      display: 'grid',
-      gridTemplateAreas: `"header header" "banner banner" "gallery canvas"`,
-      gridTemplateColumns: '1fr 2fr',
-      gridAutoRows: 'auto',
-      minHeight: '100vh',
-      gap: spacing,
-    }),
-    [spacing]
-  );
-
   return (
     <ActiveCampaignProvider>
-      <div style={gridStyle}>
-        <div style={{ gridArea: 'header' }}>
+      <div className={styles.shellGrid}>
+        <div className={styles.headerArea}>
           <HeaderBar />
         </div>
-        <div style={{ gridArea: 'banner' }}>
+        <div className={styles.bannerArea}>
           <AnnouncementBanner />
         </div>
-        <div style={{ gridArea: 'gallery' }}>
+        <div className={styles.galleryArea}>
           <CampaignGallery />
         </div>
-        <div style={{ gridArea: 'canvas' }}>
+        <div className={styles.canvasArea}>
           <CampaignCanvas userId="" onRequireAuth={onRequireAuth} />
         </div>
       </div>

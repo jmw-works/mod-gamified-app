@@ -1,5 +1,7 @@
 // src/components/XPBar.tsx
 import { Text, useTheme } from '@aws-amplify/ui-react';
+import { useEffect, useRef } from 'react';
+import styles from './XPBar.module.css';
 
 /** Gold, animated XP bar (extracted from UserStatsPanel) */
 export default function XPBar({
@@ -14,6 +16,7 @@ export default function XPBar({
   title?: string;
 }) {
   const { tokens } = useTheme();
+  const barRef = useRef<HTMLDivElement>(null);
 
   const clamped = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
   const shown = Math.round(clamped);
@@ -22,6 +25,16 @@ export default function XPBar({
   const barHeight = '12px';
   const radius = tokens.radii.small.value;
 
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    el.style.setProperty('--xpbar-percent', `${clamped}%`);
+    el.style.setProperty('--xpbar-fill', fillColor);
+    el.style.setProperty('--xpbar-track-bg', barBg);
+    el.style.setProperty('--xpbar-radius', radius);
+    el.style.setProperty('--xpbar-height', barHeight);
+  }, [clamped, fillColor, barBg, radius, barHeight]);
+
   return (
     <div
       aria-label={label ?? 'XP progress'}
@@ -29,16 +42,15 @@ export default function XPBar({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={shown}
-      style={{ width: '100%' }}
+      className={styles.container}
+      ref={barRef}
     >
       {label && (
-        <div
-          style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}
-        >
+        <div className={styles.labelRow}>
           <Text fontSize="0.85rem" color={tokens.colors.font.secondary}>
             {label}
           </Text>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className={styles.labelRight}>
             {title && (
               <Text fontSize="0.85rem" color={tokens.colors.font.secondary}>
                 {title}
@@ -51,23 +63,8 @@ export default function XPBar({
         </div>
       )}
 
-      <div
-        style={{
-          width: '100%',
-          height: barHeight,
-          background: barBg,
-          borderRadius: radius,
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            width: `${clamped}%`,
-            height: '100%',
-            background: fillColor,
-            transition: 'width 450ms ease',
-          }}
-        />
+      <div className={styles.track}>
+        <div className={styles.fill} />
       </div>
     </div>
   );

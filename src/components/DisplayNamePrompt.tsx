@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Card, Button, Heading, TextField } from '@aws-amplify/ui-react';
 import { useUserProfile } from '../context/UserProfileContext';
+import styles from './DisplayNamePrompt.module.css';
 
 const STORAGE_KEY = 'displayNameSet';
 
@@ -46,7 +47,7 @@ export default function DisplayNamePrompt() {
       <Heading level={4} marginBottom="small">
         Choose a display name
       </Heading>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8 }}>
+      <form onSubmit={handleSubmit} className={styles.form}>
         <TextField
           label="Display name"
           value={name}
@@ -56,9 +57,7 @@ export default function DisplayNamePrompt() {
         />
         <Button type="submit">Save</Button>
       </form>
-      {error && (
-        <div style={{ color: 'red', marginTop: 8 }}>{error}</div>
-      )}
+      {error && <div className={styles.error}>{error}</div>}
     </Card>
   );
 }

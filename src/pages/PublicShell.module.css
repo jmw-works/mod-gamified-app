@@ -1,0 +1,27 @@
+.shellGrid {
+  display: grid;
+  grid-template-areas:
+    "header header"
+    "banner banner"
+    "gallery canvas";
+  grid-template-columns: 1fr 2fr;
+  grid-auto-rows: auto;
+  min-height: 100vh;
+  gap: var(--space-lg, 24px);
+}
+
+.headerArea {
+  grid-area: header;
+}
+
+.bannerArea {
+  grid-area: banner;
+}
+
+.galleryArea {
+  grid-area: gallery;
+}
+
+.canvasArea {
+  grid-area: canvas;
+}
