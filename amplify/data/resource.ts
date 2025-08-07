@@ -78,6 +78,16 @@ const schema = a.schema({
       allow.authenticated().to(['read']),
     ]),
 
+  Title: a
+    .model({
+      id: a.id().required(),
+      name: a.string().required(),
+      minLevel: a.integer().required(),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(['read']),
+    ]),
+
   // ------------------------------------------------------------
   // User-owned state and progress
   // ------------------------------------------------------------
@@ -142,18 +152,6 @@ const schema = a.schema({
       userId: a.string().required(),
       campaignId: a.id().required(),
       completed: a.boolean().default(false),
-    })
-    .authorization((allow) => [
-      allow.owner().to(['create', 'read', 'update', 'delete']),
-    ]),
-
-  UserResponse: a
-    .model({
-      id: a.id().required(),
-      userId: a.string().required(),
-      questionId: a.id().required(),
-      responseText: a.string(),
-      isCorrect: a.boolean().default(false),
     })
     .authorization((allow) => [
       allow.owner().to(['create', 'read', 'update', 'delete']),

@@ -24,13 +24,14 @@ import { createUserResponse } from '../services/userResponseService';
 import type { Schema } from '../../amplify/data/resource';
 import { getLevelFromXP } from '../utils/xp';
 import type { HandleAnswer, SubmitArgs } from '../types/QuestionTypes';
+import { listTitles } from '../services/titleService';
 
 export type ProgressEvent =
   | { type: 'section'; xp: number }
   | { type: 'campaign'; xp: number }
   | { type: 'level'; xp: number; level: number };
 
-type ProgressListener = (event: ProgressEvent) => void;
+type ProgressEventListener = (event: ProgressEvent) => void;
 
 interface ProgressContextValue {
   xp: number;
@@ -39,11 +40,12 @@ interface ProgressContextValue {
   completedSections: number[];
   completedCampaigns: string[];
   answeredQuestions: string[];
+  title: string;
   awardXP: (amount: number) => void;
   markSectionComplete: (section: number, sectionId?: string) => Promise<void>;
   markCampaignComplete: (campaignId: string) => Promise<void>;
   handleAnswer: HandleAnswer;
-  subscribe: (listener: ProgressListener) => () => void;
+  subscribe: (listener: ProgressEventListener) => () => void;
 }
 
 const ProgressContext = createContext<ProgressContextValue | undefined>(undefined);
@@ -55,7 +57,8 @@ interface ProviderProps {
 
 const XP_PER_LEVEL = 100;
 const XP_FOR_SECTION = 50;
-const XP_FOR_CAMPAIGN = 100;
+const XP_FOR_CAMPAIGN = 200;
+
 type UserProgressModel = Schema['UserProgress']['type'];
 
 function startOfDay(d: Date) {
@@ -72,6 +75,18 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   const [answeredQuestions, setAnsweredQuestions] = useState<string[]>([]);
   const [lastBlazeAt, setLastBlazeAt] = useState<string | null>(null);
   const [progressId, setProgressId] = useState<string | null>(null);
+  const [titles, setTitles] = useState<Schema['Title']['type'][]>([]);
+
+  const listeners = useRef(new Set<ProgressEventListener>());
+
+  const emit = useCallback((event: ProgressEvent) => {
+    listeners.current.forEach((fn) => fn(event));
+  }, []);
+
+  const subscribe = useCallback((fn: ProgressEventListener) => {
+    listeners.current.add(fn);
+    return () => listeners.current.delete(fn);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,9 +108,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 
         if (!row) {
           const created = await createUserProgress({ userId });
-          row =
-            (created as { data?: UserProgressModel }).data ??
-            ((created as unknown) as UserProgressModel);
+          row = (created as { data?: UserProgressModel }).data ?? (created as unknown as UserProgressModel);
         }
 
         if (cancelled || !row) return;
@@ -105,14 +118,10 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         setStreak(row.dailyStreak ?? 0);
         setLastBlazeAt(row.lastBlazeAt ?? null);
 
-        const answered = (row.answeredQuestions ?? []).filter(
-          (id): id is string => typeof id === 'string'
-        );
+        const answered = (row.answeredQuestions ?? []).filter((id): id is string => typeof id === 'string');
         setAnsweredQuestions(answered);
 
-        const sections = (row.completedSections ?? []).filter(
-          (n): n is number => typeof n === 'number'
-        );
+        const sections = (row.completedSections ?? []).filter((n): n is number => typeof n === 'number');
         setCompletedSections(sections);
 
         const cpRes = await listCampaignProgress({
@@ -134,82 +143,122 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     };
   }, [userId]);
 
-  const level = useMemo(() => getLevelFromXP(xp, XP_PER_LEVEL), [xp]);
-
-  const listeners = useRef(new Set<ProgressListener>());
-
-  const emit = useCallback((event: ProgressEvent) => {
-    listeners.current.forEach((fn) => fn(event));
-  }, []);
-
-  const subscribe = useCallback((fn: ProgressListener) => {
-    listeners.current.add(fn);
-    return () => listeners.current.delete(fn);
-  }, []);
-
-  const awardXP = useCallback(
-    (amount: number) => {
-      const now = new Date();
-      const todayStart = startOfDay(now);
-      const last = lastBlazeAt ? new Date(lastBlazeAt) : null;
-      let newStreak = streak;
-      if (!last) newStreak = 1;
-      else {
-        const lastStart = startOfDay(last);
-        const diff = Math.floor(
-          (todayStart.getTime() - lastStart.getTime()) / 86400000
-        );
-        if (diff === 1) newStreak = Math.max(1, newStreak) + 1;
-        else if (diff > 1) newStreak = 1;
-        else newStreak = Math.max(1, newStreak);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTitles() {
+      try {
+        const res = await listTitles({ selectionSet: ['name', 'minLevel'] });
+        if (!cancelled) setTitles(res.data ?? []);
+      } catch (e) {
+        console.warn('Failed to load titles', e);
       }
-      const newLast = now.toISOString();
-      setStreak(newStreak);
-      setLastBlazeAt(newLast);
+    }
+    loadTitles();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-      setXP((prev) => {
-        const newXP = prev + amount;
-        const prevLevel = getLevelFromXP(prev, XP_PER_LEVEL);
-        const newLevel = getLevelFromXP(newXP, XP_PER_LEVEL);
-        if (newLevel > prevLevel) {
-          emit({ type: 'level', level: newLevel, xp: amount });
-        }
-        if (progressId) {
-          updateUserProgress({
-            id: progressId,
-            totalXP: newXP,
-            dailyStreak: newStreak,
-            lastBlazeAt: newLast,
-          }).catch((e) => console.warn('Failed to persist XP', e));
-        }
-        return newXP;
-      });
-    },
-    [progressId, lastBlazeAt, streak, emit]
-  );
+  const level = useMemo(() => getLevelFromXP(xp, XP_PER_LEVEL), [xp]);
+  const title = useMemo(() => {
+    if (!titles.length) return '';
+    let current: Schema['Title']['type'] | null = null;
+    for (const t of titles) {
+      const min = t.minLevel ?? 0;
+      if (level >= min && (!current || min > (current.minLevel ?? 0))) {
+        current = t;
+      }
+    }
+    return current?.name ?? '';
+  }, [titles, level]);
 
-  const markSectionComplete = useCallback(
-    async (section: number, sectionId?: string) => {
-      let newlyCompleted = false;
-      setCompletedSections((prev) => {
-        if (prev.includes(section)) return prev;
-        newlyCompleted = true;
-        const updated = [...prev, section];
+  const awardXP = useCallback((amount: number) => {
+    const now = new Date();
+    const todayStart = startOfDay(now);
+    const last = lastBlazeAt ? new Date(lastBlazeAt) : null;
+    let newStreak = streak;
+    if (!last) newStreak = 1;
+    else {
+      const lastStart = startOfDay(last);
+      const diff = Math.floor((todayStart.getTime() - lastStart.getTime()) / 86400000);
+      if (diff === 1) newStreak = Math.max(1, newStreak) + 1;
+      else if (diff > 1) newStreak = 1;
+      else newStreak = Math.max(1, newStreak);
+    }
+    const newLast = now.toISOString();
+    setStreak(newStreak);
+    setLastBlazeAt(newLast);
+
+    setXP((prev) => {
+      const newXP = prev + amount;
+      const prevLevel = getLevelFromXP(prev, XP_PER_LEVEL);
+      const newLevel = getLevelFromXP(newXP, XP_PER_LEVEL);
+      if (newLevel > prevLevel) emit({ type: 'level', level: newLevel, xp: amount });
+      if (progressId) {
+        updateUserProgress({
+          id: progressId,
+          totalXP: newXP,
+          dailyStreak: newStreak,
+          lastBlazeAt: newLast,
+        }).catch((e) => console.warn('Failed to persist XP', e));
+      }
+      return newXP;
+    });
+  }, [progressId, lastBlazeAt, streak, emit]);
+
+  const markSectionComplete = useCallback(async (section: number, sectionId?: string) => {
+    const alreadyCompleted = completedSections.includes(section);
+    if (!alreadyCompleted) {
+      setCompletedSections((prev) => [...prev, section]);
+      emit({ type: 'section', xp: XP_FOR_SECTION });
+      awardXP(XP_FOR_SECTION);
+    }
+
+    if (progressId) {
+      updateUserProgress({ id: progressId, completedSections: [...completedSections, section] }).catch((e) =>
+        console.warn('Failed to persist section', e)
+      );
+    }
+
+    if (sectionId) {
+      try {
+        const res = await listSectionProgress({
+          filter: {
+            and: [
+              { userId: { eq: userId } },
+              { sectionId: { eq: sectionId } },
+            ],
+          },
+          selectionSet: ['id', 'completed'],
+        });
+        const row = res.data?.[0];
+        if (row) {
+          if (!row.completed) await updateSectionProgress({ id: row.id, completed: true });
+        } else {
+          await createSectionProgress({ userId, sectionId, completed: true });
+        }
+      } catch (e) {
+        console.warn('Failed to persist section progress', e);
+      }
+    }
+  }, [progressId, userId, completedSections, emit, awardXP]);
+
+  const markQuestionAnswered = useCallback((questionId: string, sectionId?: string, isCorrect?: boolean) => {
+    if (isCorrect) {
+      setAnsweredQuestions((prev) => {
+        if (prev.includes(questionId)) return prev;
+        const updated = [...prev, questionId];
         if (progressId) {
-          updateUserProgress({
-            id: progressId,
-            completedSections: updated,
-          }).catch((e) => console.warn('Failed to persist section', e));
+          updateUserProgress({ id: progressId, answeredQuestions: updated }).catch((e) =>
+            console.warn('Failed to persist answer', e)
+          );
         }
         return updated;
       });
+    }
 
-      if (newlyCompleted) {
-        emit({ type: 'section', xp: XP_FOR_SECTION });
-        awardXP(XP_FOR_SECTION);
-      }
-
-      if (sectionId) {
+    if (sectionId) {
+      (async () => {
         try {
           const res = await listSectionProgress({
             filter: {
@@ -218,155 +267,75 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
                 { sectionId: { eq: sectionId } },
               ],
             },
-            selectionSet: ['id', 'completed'],
+            selectionSet: ['id', 'answeredQuestionIds', 'correctCount'],
           });
           const row = res.data?.[0];
+          const answered = row?.answeredQuestionIds ?? [];
+          const updatedAnswered = answered.includes(questionId) ? answered : [...answered, questionId];
+          const newCount = (row?.correctCount ?? 0) + (isCorrect ? 1 : 0);
           if (row) {
-            if (!row.completed)
-              await updateSectionProgress({ id: row.id, completed: true });
+            await updateSectionProgress({
+              id: row.id,
+              answeredQuestionIds: updatedAnswered,
+              correctCount: newCount,
+            });
           } else {
             await createSectionProgress({
               userId,
               sectionId,
-              completed: true,
+              answeredQuestionIds: [questionId],
+              correctCount: isCorrect ? 1 : 0,
+              completed: false,
             });
           }
         } catch (e) {
-          console.warn('Failed to persist section progress', e);
+          console.warn('Failed to persist question progress', e);
         }
-      }
-    },
-    [progressId, userId, emit, awardXP]
-  );
+      })();
+    }
+  }, [progressId, userId]);
 
-  const markQuestionAnswered = useCallback(
-    (questionId: string, sectionId?: string, isCorrect?: boolean) => {
-      if (isCorrect) {
-        setAnsweredQuestions((prev) => {
-          if (prev.includes(questionId)) return prev;
-          const updated = [...prev, questionId];
-          if (progressId) {
-            updateUserProgress({
-              id: progressId,
-              answeredQuestions: updated,
-            }).catch((e) => console.warn('Failed to persist answer', e));
-          }
-          return updated;
-        });
-      }
+  const handleAnswer: HandleAnswer = useCallback(async ({ questionId, isCorrect, xp = 0, userAnswer = '', sectionId }: SubmitArgs) => {
+    try {
+      await createUserResponse({ userId, questionId, responseText: userAnswer, isCorrect });
+    } catch (e) {
+      console.warn('Failed to persist user response', e);
+    }
 
-      if (sectionId) {
-        (async () => {
-          try {
-            const res = await listSectionProgress({
-              filter: {
-                and: [
-                  { userId: { eq: userId } },
-                  { sectionId: { eq: sectionId } },
-                ],
-              },
-              selectionSet: ['id', 'answeredQuestionIds', 'correctCount'],
-            });
-            const row = res.data?.[0];
-            const answered = row?.answeredQuestionIds ?? [];
-            const updatedAnswered = answered.includes(questionId)
-              ? answered
-              : [...answered, questionId];
-            const newCount = (row?.correctCount ?? 0) + (isCorrect ? 1 : 0);
-            if (row) {
-              await updateSectionProgress({
-                id: row.id,
-                answeredQuestionIds: updatedAnswered,
-                correctCount: newCount,
-              });
-            } else {
-              await createSectionProgress({
-                userId,
-                sectionId,
-                answeredQuestionIds: [questionId],
-                correctCount: isCorrect ? 1 : 0,
-                completed: false,
-              });
-            }
-          } catch (e) {
-            console.warn('Failed to persist question progress', e);
-          }
-        })();
-      }
-    },
-    [progressId, userId]
-  );
+    markQuestionAnswered(questionId, sectionId, isCorrect);
 
-  const handleAnswer: HandleAnswer = useCallback(
-    async ({
-      questionId,
-      isCorrect,
-      xp = 0,
-      userAnswer = '',
-      sectionId,
-    }: SubmitArgs) => {
-      try {
-        await createUserResponse({
-          userId,
-          questionId,
-          responseText: userAnswer,
-          isCorrect,
-        });
-      } catch (e) {
-        console.warn('Failed to persist user response', e);
-      }
+    if (isCorrect && !answeredQuestions.includes(questionId)) {
+      awardXP(xp);
+    }
+  }, [answeredQuestions, awardXP, markQuestionAnswered, userId]);
 
-      markQuestionAnswered(questionId, sectionId, isCorrect);
+  const markCampaignComplete = useCallback(async (campaignId: string) => {
+    const alreadyCompleted = completedCampaigns.includes(campaignId);
+    if (!alreadyCompleted) {
+      setCompletedCampaigns((prev) => [...prev, campaignId]);
+      emit({ type: 'campaign', xp: XP_FOR_CAMPAIGN });
+      awardXP(XP_FOR_CAMPAIGN);
+    }
 
-      if (!isCorrect) return;
-
-      const alreadyAnswered = answeredQuestions.includes(questionId);
-      if (!alreadyAnswered) {
-        awardXP(xp);
-      }
-    },
-    [answeredQuestions, awardXP, markQuestionAnswered, userId]
-  );
-
-  const markCampaignComplete = useCallback(
-    async (campaignId: string) => {
-      let newlyCompleted = false;
-      setCompletedCampaigns((prev) => {
-        if (prev.includes(campaignId)) return prev;
-        newlyCompleted = true;
-        return [...prev, campaignId];
+    try {
+      const res = await listCampaignProgress({
+        filter: {
+          and: [
+            { userId: { eq: userId } },
+            { campaignId: { eq: campaignId } },
+          ],
+        },
+        selectionSet: ['id', 'completed'],
       });
-
-      if (newlyCompleted) {
-        emit({ type: 'campaign', xp: XP_FOR_CAMPAIGN });
-        awardXP(XP_FOR_CAMPAIGN);
-      }
-
-      try {
-        const res = await listCampaignProgress({
-          filter: {
-            and: [
-              { userId: { eq: userId } },
-              { campaignId: { eq: campaignId } },
-            ],
-          },
-          selectionSet: ['id', 'completed'],
-        });
-        const row = res.data?.[0];
-        if (row) {
-          if (!row.completed)
-            await updateCampaignProgress({ id: row.id, completed: true });
-        } else {
-          await createCampaignProgress({ userId, campaignId, completed: true });
-        }
-      } catch (e) {
-        console.warn('Failed to persist campaign progress', e);
-      } finally {
-        window.dispatchEvent(new Event('campaignProgressChanged'));
-      }
-    },
-    [userId, emit, awardXP]
-  );
+      const row = res.data?.[0];
+      if (row && !row.completed) await updateCampaignProgress({ id: row.id, completed: true });
+      else if (!row) await createCampaignProgress({ userId, campaignId, completed: true });
+    } catch (e) {
+      console.warn('Failed to persist campaign progress', e);
+    } finally {
+      window.dispatchEvent(new Event('campaignProgressChanged'));
+    }
+  }, [userId, completedCampaigns, emit, awardXP]);
 
   const value: ProgressContextValue = {
     xp,
@@ -375,6 +344,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     completedSections,
     completedCampaigns,
     answeredQuestions,
+    title,
     awardXP,
     markSectionComplete,
     markCampaignComplete,
@@ -392,5 +362,6 @@ export function useProgress() {
 }
 
 export default ProgressContext;
+
 
 
