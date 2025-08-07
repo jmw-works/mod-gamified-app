@@ -1,0 +1,35 @@
+:root {
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Text colors */
+  --color-text: #111827;
+  --color-text-inverse: #ffffff;
+  --color-text-muted: #e0e0e0;
+  --color-text-secondary: #555555;
+  --color-text-emphasis: #333333;
+
+  /* Backgrounds and surfaces */
+  --color-bg: #f8f9fa;
+  --color-surface: #ffffff;
+  --color-bg-dark: #0b1526;
+  --color-bg-alt: #0f172a;
+  --color-surface-dark: #1e2a3a;
+  --color-surface-disabled: #3a4b5c;
+
+  /* Accents */
+  --color-accent: #e7bb73;
+  --color-accent-hover: #d8a854;
+  --color-success: #4CAF50;
+  --color-success-hover: #45a049;
+  --color-info: #3b82f6;
+
+  /* Borders */
+  --color-border: #d1d5db;
+  --color-border-input: #ccc;
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+
+  /* Misc */
+  --color-overlay: rgba(0, 0, 0, 0.55);
+}
