@@ -6,9 +6,10 @@ import { useUserProfile } from '../context/UserProfileContext';
 
 interface CampaignCanvasProps {
   userId: string;
+  onRequireAuth?: () => void;
 }
 
-export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
+export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvasProps) {
   const { activeCampaignId: campaignId } = useActiveCampaign();
 
   const {
@@ -47,6 +48,10 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
   const sectionText = current.section ? sectionTextByNumber.get(current.section) : undefined;
 
   const onAnswer = async (answerId: string) => {
+    if (!userId) {
+      onRequireAuth?.();
+      return;
+    }
     const ans = current.answers.find((a) => a.id === answerId);
     const isCorrect = !!ans?.isCorrect;
 
