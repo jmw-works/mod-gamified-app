@@ -1,10 +1,17 @@
-import { useContext } from 'react';
-import { ActiveCampaignContext } from './ActiveCampaignContext';
+// src/hooks/useActiveCampaign.ts
+import { createContext, useContext } from 'react';
+
+export type ActiveCampaignContextValue = {
+  activeCampaignId: string | null;
+  setActiveCampaignId?: (id: string | null) => void;
+};
+
+export const ActiveCampaignContext = createContext<ActiveCampaignContextValue>({
+  activeCampaignId: null,
+  setActiveCampaignId: undefined,
+});
 
 export function useActiveCampaign() {
-  const ctx = useContext(ActiveCampaignContext);
-  if (!ctx) {
-    throw new Error('useActiveCampaign must be used within ActiveCampaignProvider');
-  }
-  return ctx;
+  return useContext(ActiveCampaignContext);
 }
+
