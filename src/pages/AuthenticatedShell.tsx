@@ -65,7 +65,7 @@ export default function AuthenticatedShell() {
 
             <div className="auth-canvas">
               <Suspense fallback={<Skeleton height="200px" />}>
-                <CampaignCanvas userId={userId} />
+                <CampaignCanvas />
               </Suspense>
             </div>
 

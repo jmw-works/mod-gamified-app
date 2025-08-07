@@ -7,7 +7,7 @@ import {
 } from 'react';
 import type { HandleAnswer, SubmitArgs } from '../types/QuestionTypes';
 import styles from './SectionAccordion.module.css';
-import { FaCheckCircle } from 'react-icons/fa';
+import { FaCheckCircle, FaLock } from 'react-icons/fa';
 
 interface SectionAccordionProps {
   title: string;
@@ -55,10 +55,12 @@ export default function SectionAccordion({
         className={headerClasses.join(' ')}
         onClick={() => setExpanded((prev) => !prev)}
         disabled={locked}
+        aria-disabled={locked}
       >
         <span>{title}</span>
         <div className={styles.icons}>
-          {completed && <FaCheckCircle className={styles.check} aria-hidden />}
+          {locked && <FaLock className={styles.lock} aria-hidden />}
+          {completed && !locked && <FaCheckCircle className={styles.check} aria-hidden />}
           <span className={styles.arrow} aria-hidden />
         </div>
       </button>

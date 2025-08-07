@@ -27,7 +27,9 @@
 
 .locked {
   opacity: 0.5;
+  filter: grayscale(1);
   pointer-events: none;
+  cursor: not-allowed;
 }
 
 .icons {
@@ -38,5 +40,10 @@
 
 .check {
   color: #c9a40e;
+  font-size: 1rem;
+}
+
+.lock {
+  color: #9ca3af;
   font-size: 1rem;
 }

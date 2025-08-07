@@ -26,7 +26,7 @@ export default function PublicShell({ onRequireAuth }: PublicShellProps) {
             <CampaignGallery />
           </div>
           <div className={styles.canvasArea}>
-            <CampaignCanvas userId="" onRequireAuth={onRequireAuth} />
+            <CampaignCanvas onRequireAuth={onRequireAuth} />
           </div>
         </div>
       </GuestProgressProvider>
