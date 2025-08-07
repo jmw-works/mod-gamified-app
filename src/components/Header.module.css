@@ -7,8 +7,8 @@
   padding: 0 clamp(1rem, 5vw, 40px);
   position: fixed;
   inset: 0 0 auto 0;
-  background-color: #0b1526;
-  color: #fff;
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-inverse);
   z-index: 1000;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   height: var(--header-height);
@@ -33,7 +33,7 @@
 
 .title {
   font-weight: 800;
-  color: #fff;
+  color: var(--color-text-inverse);
   margin: 0;
   line-height: 1.1;
   font-size: var(--title-size);
@@ -41,7 +41,7 @@
 }
 
 .titleHighlight {
-  color: #e7bb73;
+  color: var(--color-accent);
   font-weight: 800;
 }
 
@@ -61,8 +61,8 @@
   gap: 0.5rem;
   padding: 0.45rem 0.75rem;
   border-radius: 9999px;
-  background-color: #0f172a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: var(--color-bg-alt);
+  border: 1px solid var(--color-border-subtle);
   white-space: nowrap;
 }
 
@@ -82,12 +82,12 @@
 .pillLabel {
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--pill-label-color, #ffffff);
+  color: var(--pill-label-color, var(--color-text-inverse));
 }
 
 .pillSublabel {
   font-size: 0.72rem;
-  color: var(--pill-sublabel-color, #e0e0e0);
+  color: var(--pill-sublabel-color, var(--color-text-muted));
 }
 
 .actions {
@@ -97,9 +97,9 @@
 }
 
 .signOutButton {
-  background-color: #e7bb73;
+  background-color: var(--color-accent);
   border: none;
-  color: #eef1f3ff;
+  color: var(--color-text-inverse);
   font-weight: 600;
 }
 
