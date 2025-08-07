@@ -8,6 +8,7 @@ export interface Question {
   section: number;
   xpValue?: number | null;
   educationalText?: string;
+  educationalRichText?: string;
   correctAnswer: string;
   hint?: string;
   explanation?: string;

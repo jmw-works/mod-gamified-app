@@ -43,7 +43,15 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
 
         const sRes = await listSections({
           filter: { campaignId: { eq: campaignId } },
-          selectionSet: ['id', 'number', 'order', 'educationalText', 'title', 'isActive'],
+          selectionSet: [
+            'id',
+            'number',
+            'order',
+            'educationalText',
+            'educationalRichText',
+            'title',
+            'isActive',
+          ],
         });
 
         const rawSections = (sRes.data ?? [])
@@ -75,7 +83,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
             number: n,
             id: s.id,
             title: s.title ?? '',
-            text: s.educationalText ?? '',
+            text: s.educationalRichText ?? s.educationalText ?? '',
             questions: [],
           };
           sectionObjs.push(section);

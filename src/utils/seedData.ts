@@ -79,6 +79,7 @@ async function ensureSectionsAndQuestions(campaignId: string, cIndex: number) {
         order: s,
         title: `Section ${cIndex}.${s}`,
         educationalText: `Placeholder text for Section ${cIndex}.${s}`,
+        educationalRichText: `**Placeholder** text for Section ${cIndex}.${s}`,
         isActive: true,
       });
     }

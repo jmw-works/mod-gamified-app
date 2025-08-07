@@ -38,6 +38,8 @@ const schema = a.schema({
 
       title: a.string(),
       educationalText: a.string(),
+      // New Markdown-based field for richer content
+      educationalRichText: a.string(),
       order: a.integer().default(0),
       isActive: a.boolean().default(true),
 
