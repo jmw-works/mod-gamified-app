@@ -11,7 +11,7 @@ import UserStatsPanel from '../components/UserStatsPanel';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
-import { calculateXPProgress } from '../utils/xp';
+import { useUserStats } from '../hooks/useUserStats';
 
 export default function AuthenticatedShell() {
   const { user, signOut, authStatus } = useAuthenticator((ctx) => [ctx.user, ctx.authStatus]);
@@ -41,11 +41,12 @@ export default function AuthenticatedShell() {
   const headerHeight = useHeaderHeight(headerRef);
   const spacing = 24;
 
-  const currentXP = profile?.experience ?? 0;
-  const maxXP = 100;
-  const percentage = calculateXPProgress(currentXP, maxXP);
-  const bountiesCompleted = 0;
-  const streakDays = 0;
+  const { stats } = useUserStats(userId);
+  const currentXP = stats.totalXP;
+  const maxXP = stats.maxXPPerLevel;
+  const percentage = stats.percentage;
+  const bountiesCompleted = stats.completedSectionsCount;
+  const streakDays = stats.dailyStreak;
 
   const gridStyle = useMemo(
     () => ({
