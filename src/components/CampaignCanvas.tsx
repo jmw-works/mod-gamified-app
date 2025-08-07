@@ -98,6 +98,9 @@ export default function CampaignCanvas({ displayName, onProgress }: Props) {
           !safeProgress.completedSections.includes(sectionNum) &&
           sectionNum !== orderedSectionNumbers[0] &&
           !safeProgress.completedSections.includes(orderedSectionNumbers[idx - 1]);
+        const answeredCount = questionsInSection.filter((q) =>
+          safeProgress.answeredQuestions.includes(q.id)
+        ).length;
 
         return (
           <SectionAccordion
@@ -106,6 +109,7 @@ export default function CampaignCanvas({ displayName, onProgress }: Props) {
             locked={isLocked}
             sectionId={sectionIdByNumber.get(sectionNum)}
             completed={safeProgress.completedSections.includes(sectionNum)}
+            progress={{ current: answeredCount, total: questionsInSection.length }}
           >
             <div style={{ padding: '0.75rem 1rem' }}>
               <p>{sectionTextByNumber.get(sectionNum) ?? ''}</p>

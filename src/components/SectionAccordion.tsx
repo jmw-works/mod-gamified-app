@@ -8,6 +8,7 @@ import {
 import type { HandleAnswer, SubmitArgs } from '../types/QuestionTypes';
 import styles from './SectionAccordion.module.css';
 import { FaCheckCircle, FaLock } from 'react-icons/fa';
+import ProgressBar from './ProgressBar';
 
 interface SectionAccordionProps {
   title: string;
@@ -15,6 +16,10 @@ interface SectionAccordionProps {
   locked?: boolean;
   sectionId?: string;
   completed?: boolean;
+  progress?: {
+    current: number;
+    total: number;
+  };
 }
 
 export default function SectionAccordion({
@@ -23,6 +28,7 @@ export default function SectionAccordion({
   locked = false,
   sectionId,
   completed = false,
+  progress,
 }: SectionAccordionProps) {
   const [expanded, setExpanded] = useState(false);
   const headerClasses = [styles.header];
@@ -64,6 +70,18 @@ export default function SectionAccordion({
           <span className={styles.arrow} aria-hidden />
         </div>
       </button>
+      {progress && (
+        <div className={styles.progress}>
+          <ProgressBar
+            percent={
+              progress.total > 0
+                ? (progress.current / progress.total) * 100
+                : 0
+            }
+            label={`${progress.current}/${progress.total}`}
+          />
+        </div>
+      )}
       {expanded && <div>{enhancedChildren}</div>}
     </section>
   );

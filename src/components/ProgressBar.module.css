@@ -1,0 +1,30 @@
+.container {
+  width: 100%;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-xxs, 4px);
+}
+
+.labelRight {
+  display: flex;
+  gap: var(--space-xs, 8px);
+}
+
+.track {
+  width: 100%;
+  height: var(--progress-height, 8px);
+  background: var(--progress-track-bg, #e5e7eb);
+  border-radius: var(--progress-radius, 4px);
+  overflow: hidden;
+}
+
+.fill {
+  width: var(--progress-percent, 0%);
+  height: 100%;
+  background: var(--progress-fill, #4caf50);
+  transition: width 450ms ease;
+}
+
