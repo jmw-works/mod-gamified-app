@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "seed:orders": "tsx scripts/seedOrders.ts"
+    "seed:orders": "tsx scripts/seedOrders.ts",
+    "seed:demo": "tsx scripts/seedDemoCampaigns.ts"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.11.2",
