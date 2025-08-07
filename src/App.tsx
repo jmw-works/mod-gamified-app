@@ -2,7 +2,8 @@
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 
-import AuthenticatedContent from './pages/AuthenticatedContent';
+import AuthenticatedShell from './pages/AuthenticatedShell';
+import { ActiveCampaignProvider } from './hooks/ActiveCampaignProvider';
 
 function AuthHeader() {
   return (
@@ -23,11 +24,13 @@ function AuthHeader() {
 export default function App() {
   return (
     <Authenticator components={{ Header: AuthHeader }}>
-      {/* At this point we’re authenticated; no null return means no TS error */}
-      <AuthenticatedContent />
+      <ActiveCampaignProvider>
+        <AuthenticatedShell />
+      </ActiveCampaignProvider>
     </Authenticator>
   );
 }
+
 
 
 

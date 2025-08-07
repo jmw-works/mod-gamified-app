@@ -1,10 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { listCampaigns } from '../services/campaignService';
-import {
-  listCampaignProgress,
-  createCampaignProgress,
-  updateCampaignProgress,
-} from '../services/progressService';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../../amplify/data/resource';
+
+const client = generateClient<Schema>();
 
 export type UICampaign = {
   id: string;
@@ -27,9 +25,11 @@ export function useCampaigns(userId?: string | null) {
     setErr(null);
     try {
       // 1) fetch all active campaigns
-      const cRes = await listCampaigns({
+      const cRes = await client.models.Campaign.list({
+        filter: { isActive: { eq: true } },
         selectionSet: ['id', 'title', 'description', 'thumbnailUrl', 'order', 'isActive'],
       });
+
       const raw = (cRes.data ?? [])
         .filter(c => c.isActive !== false)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -37,7 +37,7 @@ export function useCampaigns(userId?: string | null) {
       // 2) fetch user campaign progress
       const completedIds = new Set<string>();
       if (userId) {
-        const pRes = await listCampaignProgress({
+        const pRes = await client.models.CampaignProgress.list({
           filter: { userId: { eq: userId } },
           selectionSet: ['id', 'campaignId', 'completed'],
         });
@@ -47,7 +47,6 @@ export function useCampaigns(userId?: string | null) {
       }
 
       // 3) derive locked/unlocked based on order + completions
-      // Rule: campaign is unlocked if all campaigns with a LOWER order are completed.
       const ordered = raw.map(r => ({
         id: r.id,
         title: r.title,
@@ -60,7 +59,9 @@ export function useCampaigns(userId?: string | null) {
       const unlocked: boolean[] = [];
       const isCompleted: boolean[] = [];
       ordered.forEach((c, idx) => {
-        const prevAllCompleted = idx === 0 ? true : ordered.slice(0, idx).every(x => completedIds.has(x.id));
+        const prevAllCompleted = idx === 0
+          ? true
+          : ordered.slice(0, idx).every(x => completedIds.has(x.id));
         unlocked.push(prevAllCompleted);
         isCompleted.push(completedIds.has(c.id));
       });
@@ -85,22 +86,25 @@ export function useCampaigns(userId?: string | null) {
 
   const markCampaignCompleted = useCallback(async (campaignId: string) => {
     if (!userId) return;
-    // upsert: try to find existing row
-    const list = await listCampaignProgress({
+
+    const list = await client.models.CampaignProgress.list({
       filter: { userId: { eq: userId }, campaignId: { eq: campaignId } },
       selectionSet: ['id', 'completed'],
     });
+
     const row = list.data?.[0] ?? null;
     if (row) {
       if (!row.completed) {
-        await updateCampaignProgress({ id: row.id, completed: true });
+        await client.models.CampaignProgress.update({ id: row.id, completed: true });
       }
     } else {
-      await createCampaignProgress({ userId, campaignId, completed: true });
+      await client.models.CampaignProgress.create({ userId, campaignId, completed: true });
     }
+
     await load(); // refresh gallery lock state
   }, [userId, load]);
 
   return { campaigns, loading, error, refresh: load, markCampaignCompleted };
 }
+
 
