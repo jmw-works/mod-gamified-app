@@ -1,12 +1,6 @@
 /**
- * Shared quiz question and answer type definitions.
+ * Shared quiz question type definitions.
  */
-
-export interface Answer {
-  id: string;
-  content: string;
-  isCorrect: boolean;
-}
 
 export interface Question {
   id: string;
@@ -14,11 +8,14 @@ export interface Question {
   section: number;
   xpValue?: number | null;
   educationalText?: string;
-  answers: Answer[];
+  correctAnswer: string;
+  hint?: string;
+  explanation?: string;
 }
 
 export interface SubmitArgs {
   questionId: string;
+  responseText: string;
   isCorrect: boolean;
   xp?: number;
   responseText?: string;

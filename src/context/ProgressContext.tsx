@@ -19,8 +19,8 @@ import {
   listSectionProgress,
   createSectionProgress,
   updateSectionProgress,
-  createUserResponse,
 } from '../services/progressService';
+import { createUserResponse } from '../services/userResponseService';
 import type { Schema } from '../../amplify/data/resource';
 import { getLevelFromXP } from '../utils/xp';
 import type { HandleAnswer, SubmitArgs } from '../types/QuestionTypes';
@@ -73,7 +73,6 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   const [lastBlazeAt, setLastBlazeAt] = useState<string | null>(null);
   const [progressId, setProgressId] = useState<string | null>(null);
 
-  // Load progress from backend
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -104,11 +103,12 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         setProgressId(row.id);
         setXP(row.totalXP ?? 0);
         setStreak(row.dailyStreak ?? 0);
+        setLastBlazeAt(row.lastBlazeAt ?? null);
+
         const answered = (row.answeredQuestions ?? []).filter(
           (id): id is string => typeof id === 'string'
         );
         setAnsweredQuestions(answered);
-        setLastBlazeAt(row.lastBlazeAt ?? null);
 
         const sections = (row.completedSections ?? []).filter(
           (n): n is number => typeof n === 'number'
@@ -296,8 +296,11 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
       markQuestionAnswered(questionId, sectionId, isCorrect);
 
       if (!isCorrect) return;
+
       const alreadyAnswered = answeredQuestions.includes(questionId);
-      if (!alreadyAnswered) awardXP(xp);
+      if (!alreadyAnswered) {
+        awardXP(xp);
+      }
     },
     [answeredQuestions, awardXP, markQuestionAnswered, userId]
   );
@@ -376,4 +379,5 @@ export function useProgress() {
 }
 
 export default ProgressContext;
+
 
