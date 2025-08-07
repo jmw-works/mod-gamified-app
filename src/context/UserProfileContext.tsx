@@ -18,6 +18,8 @@ type UserProfileModel = Schema['UserProfile']['type'];
 
 interface UserProfileContextValue {
   profile: UserProfileModel | null;
+  loading: boolean;
+  error: Error | null;
   updateDisplayName: (displayName: string) => Promise<void>;
 }
 
@@ -36,10 +38,14 @@ export function UserProfileProvider({
   children,
 }: ProviderProps) {
   const [profile, setProfile] = useState<UserProfileModel | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   // Load profile for current user
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
         const res = await listUserProfiles({
@@ -48,7 +54,9 @@ export function UserProfileProvider({
         const first = (res?.data ?? [])[0] ?? null;
         if (!cancelled) setProfile(first);
       } catch (e) {
-        if (!cancelled) console.warn('Failed to load profile', e);
+        if (!cancelled) setError(e as Error);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
 
@@ -83,13 +91,14 @@ export function UserProfileProvider({
           setProfile(createdProfile);
         }
       } catch (e) {
-        console.warn('Failed to update profile', e);
+        setError(e as Error);
+        throw e;
       }
     },
     [profile, userId, email]
   );
 
-  const value: UserProfileContextValue = { profile, updateDisplayName };
+  const value: UserProfileContextValue = { profile, loading, error, updateDisplayName };
 
   return (
     <UserProfileContext.Provider value={value}>

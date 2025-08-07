@@ -1,22 +1,35 @@
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
+import { ServiceError } from './serviceError';
 
 const client = generateClient<Schema>();
 
-export function listCampaigns(
+export async function listCampaigns(
   options?: Parameters<typeof client.models.Campaign.list>[0]
 ) {
-  return client.models.Campaign.list(options);
+  try {
+    return await client.models.Campaign.list(options);
+  } catch (err) {
+    throw new ServiceError('Failed to list campaigns', { cause: err });
+  }
 }
 
-export function createCampaign(
+export async function createCampaign(
   input: Parameters<typeof client.models.Campaign.create>[0]
 ) {
-  return client.models.Campaign.create(input);
+  try {
+    return await client.models.Campaign.create(input);
+  } catch (err) {
+    throw new ServiceError('Failed to create campaign', { cause: err });
+  }
 }
 
-export function updateCampaign(
+export async function updateCampaign(
   input: Parameters<typeof client.models.Campaign.update>[0]
 ) {
-  return client.models.Campaign.update(input);
+  try {
+    return await client.models.Campaign.update(input);
+  } catch (err) {
+    throw new ServiceError('Failed to update campaign', { cause: err });
+  }
 }

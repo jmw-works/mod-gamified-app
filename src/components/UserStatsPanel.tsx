@@ -43,7 +43,11 @@ function getRankForLevel(level: number): { title: string; notes: string; tier: n
 export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanelProps) {
   const { tokens } = useTheme();
   const { xp, level } = useProgress();
-  const { profile } = useUserProfile();
+  const {
+    profile,
+    loading: profileLoading,
+    error: profileError,
+  } = useUserProfile();
   const { user } = useAuthenticator((ctx) => [ctx.user]);
 
   // Defensive defaults
@@ -70,14 +74,29 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
 
   const rank = getRankForLevel(level);
 
+  const containerStyle = {
+    position: 'sticky' as const,
+    top: headerHeight + spacing,
+    maxWidth: '320px',
+  };
+
+  if (profileLoading)
+    return (
+      <View padding={spacing} style={containerStyle}>
+        Loading profile…
+      </View>
+    );
+  if (profileError)
+    return (
+      <View padding={spacing} style={containerStyle}>
+        Error loading profile: {profileError.message}
+      </View>
+    );
+
   return (
     <View
       padding={spacing}
-      style={{
-        position: 'sticky',
-        top: headerHeight + spacing,
-        maxWidth: '320px',
-      }}
+      style={containerStyle}
     >
       <Heading level={3} marginBottom="small">
         User Stats

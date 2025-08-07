@@ -1,61 +1,98 @@
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
+import { ServiceError } from './serviceError';
 
 const client = generateClient<Schema>();
 
 // CampaignProgress
-export function listCampaignProgress(
+export async function listCampaignProgress(
   options?: Parameters<typeof client.models.CampaignProgress.list>[0]
 ) {
-  return client.models.CampaignProgress.list(options);
+  try {
+    return await client.models.CampaignProgress.list(options);
+  } catch (err) {
+    throw new ServiceError('Failed to list campaign progress', { cause: err });
+  }
 }
 
-export function createCampaignProgress(
+export async function createCampaignProgress(
   input: Parameters<typeof client.models.CampaignProgress.create>[0]
 ) {
-  return client.models.CampaignProgress.create(input);
+  try {
+    return await client.models.CampaignProgress.create(input);
+  } catch (err) {
+    throw new ServiceError('Failed to create campaign progress', { cause: err });
+  }
 }
 
-export function updateCampaignProgress(
+export async function updateCampaignProgress(
   input: Parameters<typeof client.models.CampaignProgress.update>[0]
 ) {
-  return client.models.CampaignProgress.update(input);
+  try {
+    return await client.models.CampaignProgress.update(input);
+  } catch (err) {
+    throw new ServiceError('Failed to update campaign progress', { cause: err });
+  }
 }
 
 // SectionProgress
-export function listSectionProgress(
+export async function listSectionProgress(
   options?: Parameters<typeof client.models.SectionProgress.list>[0]
 ) {
-  return client.models.SectionProgress.list(options);
+  try {
+    return await client.models.SectionProgress.list(options);
+  } catch (err) {
+    throw new ServiceError('Failed to list section progress', { cause: err });
+  }
 }
 
-export function createSectionProgress(
+export async function createSectionProgress(
   input: Parameters<typeof client.models.SectionProgress.create>[0]
 ) {
-  return client.models.SectionProgress.create(input);
+  try {
+    return await client.models.SectionProgress.create(input);
+  } catch (err) {
+    throw new ServiceError('Failed to create section progress', { cause: err });
+  }
 }
 
-export function updateSectionProgress(
+export async function updateSectionProgress(
   input: Parameters<typeof client.models.SectionProgress.update>[0]
 ) {
-  return client.models.SectionProgress.update(input);
+  try {
+    return await client.models.SectionProgress.update(input);
+  } catch (err) {
+    throw new ServiceError('Failed to update section progress', { cause: err });
+  }
 }
 
 // UserProgress
-export function listUserProgress(
+export async function listUserProgress(
   options?: Parameters<typeof client.models.UserProgress.list>[0]
 ) {
-  return client.models.UserProgress.list(options);
+  try {
+    return await client.models.UserProgress.list(options);
+  } catch (err) {
+    throw new ServiceError('Failed to list user progress', { cause: err });
+  }
 }
 
-export function createUserProgress(
+export async function createUserProgress(
   input: Parameters<typeof client.models.UserProgress.create>[0]
 ) {
-  return client.models.UserProgress.create(input);
+  try {
+    return await client.models.UserProgress.create(input);
+  } catch (err) {
+    throw new ServiceError('Failed to create user progress', { cause: err });
+  }
 }
 
-export function updateUserProgress(
+export async function updateUserProgress(
   input: Parameters<typeof client.models.UserProgress.update>[0]
 ) {
-  return client.models.UserProgress.update(input);
+  try {
+    return await client.models.UserProgress.update(input);
+  } catch (err) {
+    throw new ServiceError('Failed to update user progress', { cause: err });
+  }
 }

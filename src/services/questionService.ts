@@ -1,22 +1,35 @@
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
+import { ServiceError } from './serviceError';
 
 const client = generateClient<Schema>();
 
-export function listQuestions(
+export async function listQuestions(
   options?: Parameters<typeof client.models.Question.list>[0]
 ) {
-  return client.models.Question.list(options);
+  try {
+    return await client.models.Question.list(options);
+  } catch (err) {
+    throw new ServiceError('Failed to list questions', { cause: err });
+  }
 }
 
-export function createQuestion(
+export async function createQuestion(
   input: Parameters<typeof client.models.Question.create>[0]
 ) {
-  return client.models.Question.create(input);
+  try {
+    return await client.models.Question.create(input);
+  } catch (err) {
+    throw new ServiceError('Failed to create question', { cause: err });
+  }
 }
 
-export function updateQuestion(
+export async function updateQuestion(
   input: Parameters<typeof client.models.Question.update>[0]
 ) {
-  return client.models.Question.update(input);
+  try {
+    return await client.models.Question.update(input);
+  } catch (err) {
+    throw new ServiceError('Failed to update question', { cause: err });
+  }
 }
