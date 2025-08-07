@@ -15,8 +15,7 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { ActiveCampaignContext } from '../hooks/useActiveCampaign';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { calculateXPProgress } from '../utils/xp';
-import type { Progress } from '../types/ProgressTypes';
-import { createEmptyProgress } from '../types/ProgressTypes';
+import { type Progress, createEmptyProgress } from '../types/ProgressTypes';
 import type { DBCampaign } from '../types/AppContentTypes';
 
 const THUMBNAIL_BASE_URL =
@@ -266,11 +265,4 @@ export default function AuthenticatedContent() {
     </>
   );
 }
-
-
-
-
-
-
-
 
