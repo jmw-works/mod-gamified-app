@@ -1,0 +1,54 @@
+.authenticated-grid {
+  display: grid;
+  grid-template-areas:
+    "header header header"
+    "banner banner banner"
+    "gallery canvas stats";
+  grid-template-columns: 1fr 2fr 1fr;
+  grid-auto-rows: auto;
+  min-height: 100vh;
+  gap: 24px;
+}
+
+.auth-header {
+  grid-area: header;
+}
+
+.auth-banner {
+  grid-area: banner;
+}
+
+.auth-gallery {
+  grid-area: gallery;
+}
+
+.auth-canvas {
+  grid-area: canvas;
+}
+
+.auth-stats {
+  grid-area: stats;
+}
+
+@media (max-width: 1024px) {
+  .authenticated-grid {
+    grid-template-areas:
+      "header header"
+      "banner banner"
+      "gallery canvas"
+      "stats stats";
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .authenticated-grid {
+    grid-template-areas:
+      "header"
+      "banner"
+      "gallery"
+      "canvas"
+      "stats";
+    grid-template-columns: 1fr;
+  }
+}
