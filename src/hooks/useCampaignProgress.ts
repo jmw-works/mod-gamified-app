@@ -18,7 +18,7 @@ export function useCampaignProgress(userId?: string | null) {
     setError(null);
     try {
       await ensureSeedData();
-      const sectionRes = await listSections({ selectionSet: ['id', 'campaignId'] });
+      const sectionRes = await listSections({ selectionSet: ['id', 'campaignId'], authMode: 'identityPool' });
       const totals: Record<string, number> = {};
       const sectionToCampaign: Record<string, string> = {};
       for (const s of sectionRes.data ?? []) {
@@ -33,6 +33,7 @@ export function useCampaignProgress(userId?: string | null) {
         const progRes = await listSectionProgress({
           filter: { userId: { eq: userId }, completed: { eq: true } },
           selectionSet: ['sectionId'],
+          authMode: 'userPool',
         });
         for (const row of progRes.data ?? []) {
           const cid = sectionToCampaign[row.sectionId];

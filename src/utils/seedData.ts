@@ -4,6 +4,7 @@ import {
 } from '../services/campaignService';
 import { listSections, createSection } from '../services/sectionService';
 import { listQuestions, createQuestion } from '../services/questionService';
+import { getCurrentUser } from 'aws-amplify/auth';
 
 // Deterministically generate campaign/section/question structure so that
 // development environments can auto-populate placeholder content.
@@ -13,6 +14,12 @@ const TOTAL_CAMPAIGNS = 65;
 let seeding: Promise<void> | null = null;
 
 export async function ensureSeedData() {
+  try {
+    await getCurrentUser();
+  } catch {
+    // skip seeding for guests
+    return;
+  }
   if (!seeding) seeding = seedAll();
   return seeding;
 }
