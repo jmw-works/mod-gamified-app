@@ -5,10 +5,16 @@ import { ServiceError } from './serviceError';
 const client = generateClient<Schema>();
 
 export async function listCampaigns(
-  options?: Parameters<typeof client.models.Campaign.list>[0]
+  options: Parameters<typeof client.models.Campaign.list>[0] = {}
 ) {
   try {
-    return await client.models.Campaign.list(options);
+    const selection = Array.from(
+      new Set([...(options?.selectionSet ?? []), 'infoText'])
+    );
+    return await client.models.Campaign.list({
+      ...options,
+      selectionSet: selection,
+    });
   } catch (err) {
     throw new ServiceError('Failed to list campaigns', { cause: err });
   }

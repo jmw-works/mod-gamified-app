@@ -11,6 +11,7 @@ export type UICampaign = {
   title: string;
   description?: string | null;
   thumbnailUrl?: string | null;
+  infoText?: string | null;
   order: number;
   isActive: boolean;
   locked: boolean;      // derived for UI
@@ -29,7 +30,7 @@ export function useCampaigns(userId?: string | null) {
       // 1) fetch all active campaigns
       const cRes = await listCampaigns({
         filter: { isActive: { eq: true } },
-        selectionSet: ['id', 'title', 'description', 'thumbnailUrl', 'order', 'isActive'],
+        selectionSet: ['id', 'title', 'description', 'thumbnailUrl', 'order', 'isActive', 'infoText'],
       });
 
       const raw = (cRes.data ?? [])
@@ -54,6 +55,7 @@ export function useCampaigns(userId?: string | null) {
         title: r.title,
         description: r.description ?? null,
         thumbnailUrl: r.thumbnailUrl ?? null,
+        infoText: r.infoText ?? null,
         order: r.order ?? 0,
         isActive: r.isActive !== false,
       }));
