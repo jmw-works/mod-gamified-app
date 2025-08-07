@@ -55,7 +55,6 @@ interface ProviderProps {
   children: ReactNode;
 }
 
-const XP_PER_LEVEL = 100;
 const XP_FOR_SECTION = 50;
 const XP_FOR_CAMPAIGN = 200;
 
@@ -261,8 +260,8 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
               }
 
               // Emit events to update UI
-              const prevLevel = getLevelFromXP(prevXP, XP_PER_LEVEL);
-              const newLevel = getLevelFromXP(mergedXP, XP_PER_LEVEL);
+              const prevLevel = getLevelFromXP(prevXP);
+              const newLevel = getLevelFromXP(mergedXP);
               if (newLevel > prevLevel) emit({ type: 'level', level: newLevel, xp: guestXP });
 
               const newSections = guestSections.filter((s) => !(row.completedSections ?? []).includes(s));
@@ -311,7 +310,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     };
   }, []);
 
-  const level = useMemo(() => getLevelFromXP(xp, XP_PER_LEVEL), [xp]);
+  const level = useMemo(() => getLevelFromXP(xp), [xp]);
   const title = useMemo(() => {
     if (!titles.length) return '';
     let current: Schema['Title']['type'] | null = null;
@@ -343,8 +342,8 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 
     setXP((prev) => {
       const newXP = prev + amount;
-      const prevLevel = getLevelFromXP(prev, XP_PER_LEVEL);
-      const newLevel = getLevelFromXP(newXP, XP_PER_LEVEL);
+      const prevLevel = getLevelFromXP(prev);
+      const newLevel = getLevelFromXP(newXP);
       if (newLevel > prevLevel) emit({ type: 'level', level: newLevel, xp: amount });
       if (progressId) {
         updateUserProgress({
@@ -607,8 +606,8 @@ export function GuestProgressProvider({ children }: { children: ReactNode }) {
 
       setXP((prev) => {
         const newXP = prev + amount;
-        const prevLevel = getLevelFromXP(prev, XP_PER_LEVEL);
-        const newLevel = getLevelFromXP(newXP, XP_PER_LEVEL);
+        const prevLevel = getLevelFromXP(prev);
+        const newLevel = getLevelFromXP(newXP);
         if (newLevel > prevLevel) emit({ type: 'level', level: newLevel, xp: amount });
         return newXP;
       });
@@ -655,7 +654,7 @@ export function GuestProgressProvider({ children }: { children: ReactNode }) {
     [awardXP]
   );
 
-  const level = useMemo(() => getLevelFromXP(xp, XP_PER_LEVEL), [xp]);
+  const level = useMemo(() => getLevelFromXP(xp), [xp]);
   const title = useMemo(() => {
     if (!titles.length) return '';
     let current: Schema['Title']['type'] | null = null;
