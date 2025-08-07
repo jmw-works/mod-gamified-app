@@ -11,26 +11,8 @@ import {
   listSectionProgress,
   createSectionProgress,
   updateSectionProgress,
-  updateUserProgress,
-  listUserProgress,
-  createUserProgress,
 } from '../services/progressService';
-
-type ProgressShape = {
-  id: string;
-  userId: string;
-  totalXP: number;
-  answeredQuestions: string[];
-  completedSections: number[];
-  dailyStreak: number;
-  lastBlazeAt: string | null;
-};
-
-function startOfDay(d: Date) {
-  const t = new Date(d);
-  t.setHours(0, 0, 0, 0);
-  return t;
-}
+import { useProgress } from '../context/ProgressContext';
 function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
   if (ids.length === 0) return undefined;
   if (ids.length === 1) return { [fieldName]: { eq: ids[0] } } as Record<string, unknown>;
@@ -41,13 +23,12 @@ function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
 
 export function useCampaignQuizData(userId: string, activeCampaignId?: string | null) {
   const [questions, setQuestions] = useState<QuestionUI[]>([]);
-  const [progressBase, setProgressBase] = useState<Omit<ProgressShape, 'completedSections'> | null>(null);
-  const [completedSectionNumbers, setCompletedSectionNumbers] = useState<number[]>([]);
   const [orderedSectionNumbers, setOrderedSectionNumbers] = useState<number[]>([]);
   const [sectionIdByNumber, setSectionIdByNumber] = useState<Map<number, string>>(new Map());
   const [sectionTextByNumber, setSectionTextByNumber] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<Error | null>(null);
+  const { answeredQuestions, markQuestionAnswered } = useProgress();
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -57,55 +38,6 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    setProgressBase(null);
-    async function loadUserProgressRow(uid: string) {
-      if (!uid) {
-        return;
-      }
-      try {
-        const res = await listUserProgress({
-          filter: { userId: { eq: uid } },
-          selectionSet: [
-            'id',
-            'userId',
-            'totalXP',
-            'answeredQuestions',
-            'dailyStreak',
-            'lastBlazeAt',
-          ],
-        });
-        let row = res.data?.[0] ?? null;
-        if (!row) {
-          const createRes = await createUserProgress({
-            userId: uid,
-            totalXP: 0,
-            answeredQuestions: [],
-            dailyStreak: 0,
-            lastBlazeAt: null,
-          });
-          row = createRes.data ?? null;
-        }
-        if (!cancelled && row) {
-          setProgressBase({
-            id: row.id,
-            userId: row.userId,
-            totalXP: row.totalXP ?? 0,
-            answeredQuestions: row.answeredQuestions ?? [],
-            dailyStreak: row.dailyStreak ?? 0,
-            lastBlazeAt: row.lastBlazeAt ?? null,
-          });
-        }
-      } catch (e) {
-        if (!cancelled) setErr(e as Error);
-      }
-    }
-    loadUserProgressRow(userId);
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -143,7 +75,6 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
         if (sectionIds.length === 0) {
           if (!cancelled) {
             setQuestions([]);
-            setCompletedSectionNumbers([]);
           }
           return;
         }
@@ -180,20 +111,6 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
         });
         if (!cancelled) setQuestions(qs);
 
-        const spBaseFilter = buildOrIdFilter('sectionId', sectionIds);
-        const spRes = await listSectionProgress({
-          filter: spBaseFilter ? { and: [{ userId: { eq: userId } }, spBaseFilter] } : { userId: { eq: userId } },
-          selectionSet: ['sectionId', 'completed'],
-        });
-
-        const doneNumbers: number[] = [];
-        for (const row of spRes.data ?? []) {
-          if (row.completed) {
-            const entry = [...numToId.entries()].find(([, id]) => id === row.sectionId);
-            if (entry) doneNumbers.push(entry[0]);
-          }
-        }
-        if (!cancelled) setCompletedSectionNumbers(doneNumbers);
       } catch (e) {
         if (!cancelled) setErr(e as Error);
       } finally {
@@ -203,7 +120,6 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
 
     if (!activeCampaignId) {
       setQuestions([]);
-      setCompletedSectionNumbers([]);
       setOrderedSectionNumbers([]);
       setSectionIdByNumber(new Map());
       setSectionTextByNumber(new Map());
@@ -234,101 +150,59 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
     return m;
   }, [questions]);
 
-  const pushCompletedSection = useCallback((n: number) => {
-    setCompletedSectionNumbers((prev) => (prev.includes(n) ? prev : [...prev, n]));
-  }, []);
-
   const handleAnswer: HandleAnswer = useCallback(
-    async ({ questionId, isCorrect, xp }: SubmitArgs) => {
-    if (!progressBase || !userId) return;
-    if (!isCorrect) return;
+    async ({ questionId, isCorrect }: SubmitArgs) => {
+      if (!userId || !isCorrect) return;
 
-    const alreadyAnswered = progressBase.answeredQuestions.includes(questionId);
-    const newAnswered = alreadyAnswered
-      ? progressBase.answeredQuestions
-      : [...progressBase.answeredQuestions, questionId];
+      markQuestionAnswered(questionId);
 
-    const question = byId.get(questionId);
-    const sectionNum = question?.section ?? null;
+      const question = byId.get(questionId);
+      const sectionNum = question?.section ?? null;
 
-    if (sectionNum != null) {
-      const qIds = sectionToIds.get(sectionNum) ?? [];
-      const allAnswered = qIds.every((id) => newAnswered.includes(id));
+      if (sectionNum != null) {
+        const qIds = sectionToIds.get(sectionNum) ?? [];
+        const answered = new Set(answeredQuestions);
+        answered.add(questionId);
+        const allAnswered = qIds.every((id) => answered.has(id));
 
-      const sectionId = sectionIdByNumber.get(sectionNum);
-      if (sectionId) {
-        const list = await listSectionProgress({
-          filter: { and: [{ userId: { eq: userId } }, { sectionId: { eq: sectionId } }] },
-          selectionSet: ['id', 'completed'],
-        });
-        const row = list.data?.[0] ?? null;
-        if (row) {
-          if (row.completed !== allAnswered) {
-            await updateSectionProgress({ id: row.id, completed: allAnswered });
+        const sectionId = sectionIdByNumber.get(sectionNum);
+        if (sectionId) {
+          const list = await listSectionProgress({
+            filter: {
+              and: [
+                { userId: { eq: userId } },
+                { sectionId: { eq: sectionId } },
+              ],
+            },
+            selectionSet: ['id', 'completed'],
+          });
+          const row = list.data?.[0] ?? null;
+          if (row) {
+            if (row.completed !== allAnswered) {
+              await updateSectionProgress({ id: row.id, completed: allAnswered });
+            }
+          } else {
+            await createSectionProgress({
+              userId,
+              sectionId,
+              completed: allAnswered,
+            });
           }
-        } else {
-          await createSectionProgress({ userId, sectionId, completed: allAnswered });
         }
       }
-
-      if (allAnswered) pushCompletedSection(sectionNum);
-    }
-
-    const award = Number.isFinite(xp as number) ? (xp as number) : (question?.xpValue ?? 10);
-    const newXP = alreadyAnswered ? progressBase.totalXP : (progressBase.totalXP ?? 0) + award;
-
-    const now = new Date();
-    const todayStart = startOfDay(now);
-    const last = progressBase.lastBlazeAt ? new Date(progressBase.lastBlazeAt) : null;
-    let newDailyStreak = progressBase.dailyStreak ?? 0;
-    if (!last) newDailyStreak = 1;
-    else {
-      const lastStart = startOfDay(last);
-      const diff = Math.floor((todayStart.getTime() - lastStart.getTime()) / 86400000);
-      if (diff === 1) newDailyStreak = Math.max(1, newDailyStreak) + 1;
-      else if (diff > 1) newDailyStreak = 1;
-      else newDailyStreak = Math.max(1, newDailyStreak);
-    }
-
-    const newLastBlazeAt = now.toISOString();
-
-    const optimisticBase = {
-      ...progressBase,
-      totalXP: newXP,
-      answeredQuestions: newAnswered,
-      dailyStreak: newDailyStreak,
-      lastBlazeAt: newLastBlazeAt,
-    };
-    setProgressBase(optimisticBase);
-
-    try {
-      await updateUserProgress({
-        id: progressBase.id,
-        totalXP: newXP,
-        answeredQuestions: newAnswered,
-        dailyStreak: newDailyStreak,
-        lastBlazeAt: newLastBlazeAt,
-      });
-    } catch (e) {
-      console.warn('Failed to persist answer/progress', e);
-    }
-  }, [
-    progressBase,
-    userId,
-    byId,
-    sectionToIds,
-    sectionIdByNumber,
-    pushCompletedSection,
-  ]);
-
-  const uiProgress: ProgressShape | null = useMemo(() => {
-    if (!progressBase) return null;
-    return { ...progressBase, completedSections: completedSectionNumbers };
-  }, [progressBase, completedSectionNumbers]);
+    },
+    [
+      userId,
+      byId,
+      sectionToIds,
+      sectionIdByNumber,
+      answeredQuestions,
+      markQuestionAnswered,
+    ]
+  );
 
   return {
     questions,
-    progress: uiProgress,
     loading,
     error,
     handleAnswer,
