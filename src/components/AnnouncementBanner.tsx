@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Card, Button, Heading, Text } from '@aws-amplify/ui-react';
-import { useProgress } from '../context/ProgressContext';
-import {
-  xpForLevel,
-  getXPWithinLevel,
-  calculateXPProgress,
-} from '../utils/xp';
+import { useProgress, type ProgressEvent } from '../context/ProgressContext';
 
 type AnnouncementBannerProps = {
   /** Optional callback when a level up occurs. Useful for analytics. */
@@ -15,62 +10,64 @@ type AnnouncementBannerProps = {
 };
 
 export default function AnnouncementBanner({ onLevelUp, onDismiss }: AnnouncementBannerProps) {
-  const { xp, level, completedSections } = useProgress();
+  const { subscribe } = useProgress();
 
-  const prevLevel = useRef(level);
-  const prevCompleted = useRef(completedSections.length);
-  const prevXP = useRef(xp);
-
+  const queue = useRef<ProgressEvent[]>([]);
+  const [current, setCurrent] = useState<ProgressEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
-  const [title, setTitle] = useState<string | null>(null);
-  const [description, setDescription] = useState<string | null>(null);
-  const [indicator, setIndicator] = useState<string | null>(null);
+  const currentRef = useRef<ProgressEvent | null>(null);
+  const dismissedRef = useRef(false);
+
+  currentRef.current = current;
+  dismissedRef.current = dismissed;
 
   useEffect(() => {
-    let newTitle: string | null = null;
-    let newDesc: string | null = null;
-    let newIndicator: string | null = null;
-
-    if (level > prevLevel.current) {
-      newTitle = 'Level up!';
-      newDesc = `Level ${level} achieved!`;
-      newIndicator = String(level);
-      onLevelUp?.(level);
-    } else if (completedSections.length > prevCompleted.current) {
-      const count = completedSections.length;
-      newTitle = 'Achievement unlocked!';
-      newDesc = `${count} completed section${count === 1 ? '' : 's'}!`;
-      newIndicator = '✓';
-    } else if (xp > prevXP.current) {
-      const currentXP = getXPWithinLevel(xp);
-      const required = xpForLevel(level);
-      if (!Number.isFinite(required)) {
-        newTitle = 'Max level reached!';
-        newDesc = 'You have hit the level cap.';
-        newIndicator = String(level);
+    const unsub = subscribe((evt) => {
+      if (!currentRef.current && dismissedRef.current) {
+        setCurrent(evt);
+        setDismissed(false);
+      } else if (!currentRef.current) {
+        setCurrent(evt);
       } else {
-        const pct = Math.round(
-          calculateXPProgress(currentXP, required),
-        );
-        newTitle = 'Leveling up!';
-        newDesc = `You’ve earned ${currentXP} XP toward ${required}. Keep going to unlock the next section.`;
-        newIndicator = `${pct}%`;
+        queue.current.push(evt);
       }
+    });
+    return () => unsub();
+  }, [subscribe]);
+
+  useEffect(() => {
+    if (current?.type === 'level') {
+      onLevelUp?.(current.level);
     }
+  }, [current, onLevelUp]);
 
-    if (newTitle) {
-      setTitle(newTitle);
-      setDescription(newDesc);
-      setIndicator(newIndicator);
-      setDismissed(false);
+  const [title, description, indicator] = (() => {
+    if (!current) return [null, null, null] as const;
+    switch (current.type) {
+      case 'section':
+        return [
+          'Section complete!',
+          `You earned ${current.xp} XP.`,
+          '✓',
+        ] as const;
+      case 'campaign':
+        return [
+          'Campaign complete!',
+          `You earned ${current.xp} XP.`,
+          '✓',
+        ] as const;
+      case 'level':
+        return [
+          'Level up!',
+          `Level ${current.level} achieved! (+${current.xp} XP)`,
+          String(current.level),
+        ] as const;
+      default:
+        return [null, null, null] as const;
     }
+  })();
 
-    prevLevel.current = level;
-    prevCompleted.current = completedSections.length;
-    prevXP.current = xp;
-  }, [xp, level, completedSections, onLevelUp]);
-
-  if (dismissed || !title) return null;
+  if (dismissed || !current) return null;
 
   return (
     <Card
@@ -111,8 +108,14 @@ export default function AnnouncementBanner({ onLevelUp, onDismiss }: Announcemen
 
         <Button
           onClick={() => {
-            setDismissed(true);
             onDismiss?.();
+            const next = queue.current.shift() ?? null;
+            if (next) {
+              setCurrent(next);
+            } else {
+              setDismissed(true);
+              setCurrent(null);
+            }
           }}
           variation="link"
         >
@@ -122,3 +125,4 @@ export default function AnnouncementBanner({ onLevelUp, onDismiss }: Announcemen
     </Card>
   );
 }
+
