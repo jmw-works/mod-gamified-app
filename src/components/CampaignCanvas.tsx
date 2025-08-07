@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useProgress } from '../context/ProgressContext';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
@@ -11,6 +12,7 @@ interface CampaignCanvasProps {
 
 export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvasProps) {
   const { activeCampaignId: campaignId } = useActiveCampaign();
+  const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
 
   const {
     questions,
@@ -49,7 +51,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const sectionText = current.section ? sectionTextByNumber.get(current.section) : undefined;
 
   const onAnswer = async (answerId: string) => {
-    if (!userId) {
+    if (authStatus !== 'authenticated' || !userId) {
       onRequireAuth?.();
       return;
     }
