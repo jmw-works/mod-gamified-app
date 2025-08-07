@@ -6,7 +6,7 @@ import { ensureSeedData } from '../utils/seedData';
 import ProgressContext from '../context/ProgressContext';
 import type { Progress } from '../types/ProgressTypes';
 
-export interface QuizSection {
+interface QuizSection {
   number: number;
   id: string;
   title: string;
