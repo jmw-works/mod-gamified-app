@@ -78,6 +78,16 @@ const schema = a.schema({
       allow.authenticated().to(['read']),
     ]),
 
+  Title: a
+    .model({
+      id: a.id().required(),
+      name: a.string().required(),
+      minLevel: a.integer().required(),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(['read']),
+    ]),
+
   // ------------------------------------------------------------
   // User-owned state and progress
   // ------------------------------------------------------------
