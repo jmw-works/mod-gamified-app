@@ -3,6 +3,14 @@ import type { Question as QuestionUI } from '../types/QuestionTypes';
 import { listSections } from '../services/sectionService';
 import { listQuestions } from '../services/questionService';
 
+export interface QuizSection {
+  number: number;
+  id: string;
+  title: string;
+  text: string;
+  questions: QuestionUI[];
+}
+
 function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
   if (ids.length === 0) return undefined;
   if (ids.length === 1) return { [fieldName]: { eq: ids[0] } } as Record<string, unknown>;
@@ -12,7 +20,7 @@ function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
 }
 
 export function useCampaignQuizData(activeCampaignId?: string | null) {
-  const [questions, setQuestions] = useState<QuestionUI[]>([]);
+  const [sections, setSections] = useState<QuizSection[]>([]);
   const [orderedSectionNumbers, setOrderedSectionNumbers] = useState<number[]>([]);
   const [sectionIdByNumber, setSectionIdByNumber] = useState<Map<number, string>>(new Map());
   const [sectionTextByNumber, setSectionTextByNumber] = useState<Map<number, string>>(new Map());
@@ -32,7 +40,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
           selectionSet: ['id', 'number', 'order', 'educationalText', 'title', 'isActive'],
         });
 
-        const sections = (sRes.data ?? [])
+        const rawSections = (sRes.data ?? [])
           .filter((s) => s.isActive !== false)
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -41,13 +49,24 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
         const textByNum = new Map<number, string>();
         const titleByNum = new Map<number, string>();
         const orderedNums: number[] = [];
+        const sectionObjs: QuizSection[] = [];
+        const sectionById = new Map<string, QuizSection>();
 
-        for (const s of sections) {
+        for (const s of rawSections) {
           const n = (s.number ?? 0) as number;
+          const section: QuizSection = {
+            number: n,
+            id: s.id,
+            title: s.title ?? '',
+            text: s.educationalText ?? '',
+            questions: [],
+          };
+          sectionObjs.push(section);
+          sectionById.set(s.id, section);
           numToId.set(n, s.id);
           idToNumber.set(s.id, n);
-          textByNum.set(n, s.educationalText ?? '');
-          titleByNum.set(n, s.title ?? '');
+          textByNum.set(n, section.text);
+          titleByNum.set(n, section.title);
           orderedNums.push(n);
         }
 
@@ -57,9 +76,9 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
         setSectionTitleByNumber(titleByNum);
         setOrderedSectionNumbers(orderedNums);
 
-        const sectionIds = sections.map((s) => s.id);
+        const sectionIds = rawSections.map((s) => s.id);
         if (sectionIds.length === 0) {
-          if (!cancelled) setQuestions([]);
+          if (!cancelled) setSections([]);
           return;
         }
 
@@ -100,13 +119,13 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
           bySectionId.get(sid)!.push(q);
         }
 
-        const qs: QuestionUI[] = [];
-        for (const s of sections) {
+        for (const s of rawSections) {
           const rows = bySectionId.get(s.id) ?? [];
           rows.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
           const sectionNum = idToNumber.get(s.id) ?? 0;
+          const sectionObj = sectionById.get(s.id)!;
           for (const row of rows) {
-            qs.push({
+            sectionObj.questions.push({
               id: row.id,
               text: row.text,
               section: sectionNum,
@@ -123,7 +142,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
           }
         }
 
-        if (!cancelled) setQuestions(qs);
+        if (!cancelled) setSections(sectionObjs);
       } catch (e) {
         if (!cancelled) setErr(e as Error);
       } finally {
@@ -132,7 +151,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
     }
 
     if (!activeCampaignId) {
-      setQuestions([]);
+      setSections([]);
       setOrderedSectionNumbers([]);
       setSectionIdByNumber(new Map());
       setSectionTextByNumber(new Map());
@@ -148,7 +167,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
   }, [activeCampaignId]);
 
   return {
-    questions,
+    sections,
     loading,
     error,
     orderedSectionNumbers,

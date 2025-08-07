@@ -16,14 +16,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const { activeCampaignId: campaignId } = useActiveCampaign();
   const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
 
-  const {
-    questions,
-    sectionTextByNumber,
-    sectionTitleByNumber,
-    loading,
-    error,
-    sectionIdByNumber,
-  } = useCampaignQuizData(campaignId);
+  const { sections, loading, error } = useCampaignQuizData(campaignId);
 
   const progress = useContext(ProgressContext);
   const handleAnswer = progress?.handleAnswer;
@@ -35,15 +28,17 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const userProfile = useContext(UserProfileContext);
   const profile = userProfile?.profile ?? null;
 
-  const [index, setIndex] = useState(0);
+  const [sectionIndex, setSectionIndex] = useState(0);
+  const [questionIndex, setQuestionIndex] = useState(0);
   const [response, setResponse] = useState('');
   const [infoText, setInfoText] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  // Reset index when campaign or questions change
+  // Reset indices when campaign or sections change
   useEffect(() => {
-    setIndex(0);
-  }, [campaignId, questions.length]);
+    setSectionIndex(0);
+    setQuestionIndex(0);
+  }, [campaignId, sections.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,17 +66,16 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   if (!campaignId) return <div>Select a campaign to begin.</div>;
   if (loading) return <div>Loading campaign…</div>;
   if (error) return <div>Error loading campaign: {error.message}</div>;
-  if (!questions.length) return <div>No questions found for this campaign.</div>;
-  if (index >= questions.length)
+  const sectionsWithQuestions = sections.filter((s) => s.questions.length > 0);
+  if (!sectionsWithQuestions.length)
+    return <div>No questions found for this campaign.</div>;
+  if (sectionIndex >= sectionsWithQuestions.length)
     return <div>Campaign complete, {profile?.displayName ?? 'Friend'}!</div>;
 
-  const current = questions[index];
-  const sectionTitle = current.section
-    ? sectionTitleByNumber.get(current.section)
-    : undefined;
-  const sectionText = current.section
-    ? sectionTextByNumber.get(current.section)
-    : undefined;
+  const currentSection = sectionsWithQuestions[sectionIndex];
+  const current = currentSection.questions[questionIndex];
+  const sectionTitle = currentSection.title;
+  const sectionText = currentSection.text;
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -99,25 +93,25 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       userAnswer,
       isCorrect,
       xp: current.xpValue ?? undefined,
-      sectionId: sectionIdByNumber.get(current.section),
+      sectionId: currentSection.id,
     });
 
     if (isCorrect) {
       const answered = new Set(answeredQuestions);
       answered.add(current.id);
 
-      const sectionQs = questions.filter((q) => q.section === current.section);
+      const sectionQs = currentSection.questions;
       const allAnswered = sectionQs.every((q) => answered.has(q.id));
 
-      if (allAnswered && current.section != null) {
-        const secId = sectionIdByNumber.get(current.section);
-        markSectionComplete?.(current.section, secId);
+      if (allAnswered) {
+        markSectionComplete?.(currentSection.number, currentSection.id);
 
         const completed = new Set(completedSections);
-        completed.add(current.section);
+        completed.add(currentSection.number);
 
-        const allSections = new Set(questions.map((q) => q.section));
-        if ([...allSections].every((n) => completed.has(n))) {
+        if (
+          sectionsWithQuestions.every((s) => completed.has(s.number))
+        ) {
           markCampaignComplete?.(campaignId);
         }
       }
@@ -126,7 +120,14 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       setTimeout(() => {
         setFeedback(null);
         setResponse('');
-        setIndex((prev) => prev + 1);
+        setQuestionIndex((prev) => {
+          const next = prev + 1;
+          if (next < currentSection.questions.length) {
+            return next;
+          }
+          setSectionIndex((s) => s + 1);
+          return 0;
+        });
       }, 1000);
     } else {
       setFeedback('Try again');
