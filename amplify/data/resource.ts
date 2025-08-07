@@ -3,7 +3,7 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 
 const schema = a.schema({
   // ------------------------------------------------------------
-  // Content hierarchy: Campaign -> Section -> Question -> Answer
+  // Content hierarchy: Campaign -> Section -> Question
   // ------------------------------------------------------------
 
   Campaign: a
@@ -67,21 +67,11 @@ const schema = a.schema({
       order: a.integer().default(0),
       isActive: a.boolean().default(true),
 
-      answers: a.hasMany('Answer', 'questionId'),
-    })
-    .authorization((allow) => [
-      allow.authenticated().to(['read']),
-    ]),
+      correctAnswer: a.string().required(),
+      hint: a.string(),
+      explanation: a.string(),
 
-  Answer: a
-    .model({
-      id: a.id().required(),
-      questionId: a.id().required(),
-      question: a.belongsTo('Question', 'questionId'),
-      content: a.string().required(),
-      isCorrect: a.boolean().default(false),
-      order: a.integer().default(0),
-      isActive: a.boolean().default(true),
+      responses: a.hasMany('UserResponse', 'questionId'),
     })
     .authorization((allow) => [
       allow.authenticated().to(['read']),
@@ -98,6 +88,19 @@ const schema = a.schema({
       email: a.string(),
       displayName: a.string(),
       avatarUrl: a.string(),
+    })
+    .authorization((allow) => [
+      allow.owner().to(['create', 'read', 'update', 'delete']),
+    ]),
+
+  UserResponse: a
+    .model({
+      id: a.id().required(),
+      userId: a.string().required(),
+      questionId: a.id().required(),
+      question: a.belongsTo('Question', 'questionId'),
+      responseText: a.string().required(),
+      isCorrect: a.boolean().required(),
     })
     .authorization((allow) => [
       allow.owner().to(['create', 'read', 'update', 'delete']),

@@ -73,7 +73,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
           ...(qFilter ? { filter: qFilter } : {}),
           selectionSet: [
             'id', 'text', 'section', 'xpValue', 'sectionRef.number',
-            'answers.id', 'answers.content', 'answers.isCorrect',
+            'correctAnswer', 'hint', 'explanation',
           ],
         });
 
@@ -84,18 +84,18 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
             section?: number | null;
             sectionRef?: { number?: number | null } | null;
             xpValue?: number | null;
-            answers?: { id: string; content: string; isCorrect?: boolean | null }[];
+            correctAnswer: string;
+            hint?: string | null;
+            explanation?: string | null;
           };
           return {
             id: row.id,
             text: row.text,
             section: (row.section ?? row.sectionRef?.number ?? 0) as number,
             xpValue: row.xpValue ?? 10,
-            answers: (row.answers ?? []).map((ans) => ({
-              id: ans.id,
-              content: ans.content,
-              isCorrect: !!ans.isCorrect,
-            })),
+            correctAnswer: row.correctAnswer,
+            hint: row.hint ?? undefined,
+            explanation: row.explanation ?? undefined,
           };
         });
         if (!cancelled) setQuestions(qs);

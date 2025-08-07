@@ -20,6 +20,7 @@ import {
   createSectionProgress,
   updateSectionProgress,
 } from '../services/progressService';
+import { createUserResponse } from '../services/userResponseService';
 import type { Schema } from '../../amplify/data/resource';
 import { getLevelFromXP } from '../utils/xp';
 import type { HandleAnswer, SubmitArgs } from '../types/QuestionTypes';
@@ -233,13 +234,20 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   );
 
   const handleAnswer: HandleAnswer = useCallback(
-    ({ questionId, isCorrect, xp = 0 }: SubmitArgs) => {
+    async ({ questionId, responseText, isCorrect, xp = 0 }: SubmitArgs) => {
+      createUserResponse({
+        userId,
+        questionId,
+        responseText,
+        isCorrect,
+      }).catch((e) => console.warn('Failed to record response', e));
+
       if (!isCorrect) return;
       const alreadyAnswered = answeredQuestions.includes(questionId);
       if (!alreadyAnswered) awardXP(xp);
       markQuestionAnswered(questionId);
     },
-    [answeredQuestions, awardXP, markQuestionAnswered]
+    [answeredQuestions, awardXP, markQuestionAnswered, userId]
   );
 
   const markCampaignComplete = useCallback(

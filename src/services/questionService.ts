@@ -33,3 +33,13 @@ export async function updateQuestion(
     throw new ServiceError('Failed to update question', { cause: err });
   }
 }
+
+export async function deleteQuestion(
+  input: Parameters<typeof client.models.Question.delete>[0]
+) {
+  try {
+    return await client.models.Question.delete(input);
+  } catch (err) {
+    throw new ServiceError('Failed to delete question', { cause: err });
+  }
+}
