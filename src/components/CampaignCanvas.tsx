@@ -6,6 +6,7 @@ import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import ProgressContext from '../context/ProgressContext';
 import UserProfileContext from '../context/UserProfileContext';
 import { listCampaigns } from '../services/campaignService';
+import SectionAccordion from './SectionAccordion';
 
 interface CampaignCanvasProps {
   userId: string;
@@ -137,20 +138,21 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   return (
     <div data-campaign-id={campaignId ?? ''} data-user-id={userId}>
       {infoText && <p>{infoText}</p>}
-      {sectionTitle && <h3 className="current-section-title">{sectionTitle}</h3>}
-      {sectionText && <p className="current-section-text">{sectionText}</p>}
+      <SectionAccordion title={sectionTitle ?? ''} sectionId={currentSection.id}>
+        {sectionText && <p className="current-section-text">{sectionText}</p>}
 
-      <div className="question-item">
-        <p>{current.text}</p>
-        <form onSubmit={onSubmit}>
-          <textarea
-            value={response}
-            onChange={(e) => setResponse(e.target.value)}
-          />
-          <button type="submit">Submit</button>
-        </form>
-        {feedback && <p className="answer-feedback">{feedback}</p>}
-      </div>
+        <div className="question-item">
+          <p>{current.text}</p>
+          <form onSubmit={onSubmit}>
+            <textarea
+              value={response}
+              onChange={(e) => setResponse(e.target.value)}
+            />
+            <button type="submit">Submit</button>
+          </form>
+          {feedback && <p className="answer-feedback">{feedback}</p>}
+        </div>
+      </SectionAccordion>
     </div>
   );
 }
