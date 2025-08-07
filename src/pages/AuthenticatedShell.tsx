@@ -10,6 +10,7 @@ import CampaignCanvas from '../components/CampaignCanvas';
 import UserStatsPanel from '../components/UserStatsPanel';
 
 import { useCampaigns } from '../hooks/useCampaigns';
+import { useUserProfile } from '../context/UserProfileContext';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { ProgressProvider } from '../context/ProgressContext';
 import { ActiveCampaignProvider } from '../context/ActiveCampaignContext';
@@ -75,12 +76,46 @@ export default function AuthenticatedShell() {
             </div>
 
             <div style={{ gridArea: 'stats' }}>
-              <UserStatsPanel headerHeight={headerHeight} spacing={spacing} />
+              <UserStatsPanelWithProfile
+                username={user?.username}
+                email={emailFromAttrs ?? undefined}
+                headerHeight={headerHeight}
+                spacing={spacing}
+              />
             </div>
           </div>
         </ProgressProvider>
       </ActiveCampaignProvider>
     </UserProfileProvider>
+  );
+}
+
+// Helper component to use profile inside stats panel
+function UserStatsPanelWithProfile({
+  username,
+  email,
+  headerHeight,
+  spacing,
+}: {
+  username?: string;
+  email?: string;
+  headerHeight: number;
+  spacing: number;
+}) {
+  const { profile } = useUserProfile();
+
+  return (
+    <UserStatsPanel
+      user={{
+        username,
+        attributes: {
+          name: profile?.displayName ?? '',
+          email,
+        },
+      }}
+      headerHeight={headerHeight}
+      spacing={spacing}
+    />
   );
 }
 

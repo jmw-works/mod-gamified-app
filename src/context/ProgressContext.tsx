@@ -26,6 +26,7 @@ type ProgressListener = (state: {
   streak: number;
   completedSections: number[];
   completedCampaigns: string[];
+  answeredQuestions: string[];
 }) => void;
 
 interface ProgressContextValue {
@@ -34,9 +35,11 @@ interface ProgressContextValue {
   streak: number;
   completedSections: number[];
   completedCampaigns: string[];
+  answeredQuestions: string[];
   awardXP: (amount: number) => void;
   markSectionComplete: (section: number) => void;
   markCampaignComplete: (campaignId: string) => void;
+  markQuestionAnswered: (questionId: string) => void;
   subscribe: (listener: ProgressListener) => () => void;
 }
 
@@ -50,11 +53,19 @@ interface ProviderProps {
 const XP_PER_LEVEL = 100;
 type UserProgressModel = Schema['UserProgress']['type'];
 
+function startOfDay(d: Date) {
+  const t = new Date(d);
+  t.setHours(0, 0, 0, 0);
+  return t;
+}
+
 export function ProgressProvider({ userId, children }: ProviderProps) {
   const [xp, setXP] = useState(0);
   const [streak, setStreak] = useState(0);
   const [completedSections, setCompletedSections] = useState<number[]>([]);
   const [completedCampaigns, setCompletedCampaigns] = useState<string[]>([]);
+  const [answeredQuestions, setAnsweredQuestions] = useState<string[]>([]);
+  const [lastBlazeAt, setLastBlazeAt] = useState<string | null>(null);
   const [progressId, setProgressId] = useState<string | null>(null);
 
   // Load progress from backend
@@ -64,7 +75,14 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
       try {
         const res = await listUserProgress({
           filter: { userId: { eq: userId } },
-          selectionSet: ['id', 'totalXP', 'dailyStreak', 'completedSections'],
+          selectionSet: [
+            'id',
+            'totalXP',
+            'dailyStreak',
+            'completedSections',
+            'answeredQuestions',
+            'lastBlazeAt',
+          ],
         });
 
         let row: UserProgressModel | null = (res.data ?? [])[0] ?? null;
@@ -81,6 +99,11 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         setProgressId(row.id);
         setXP(row.totalXP ?? 0);
         setStreak(row.dailyStreak ?? 0);
+        const answered = (row.answeredQuestions ?? []).filter(
+          (id): id is string => typeof id === 'string'
+        );
+        setAnsweredQuestions(answered);
+        setLastBlazeAt(row.lastBlazeAt ?? null);
 
         const sections = (row.completedSections ?? []).filter(
           (n): n is number => typeof n === 'number'
@@ -140,6 +163,42 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     [progressId]
   );
 
+  const markQuestionAnswered = useCallback(
+    (questionId: string) => {
+      setAnsweredQuestions((prev) => {
+        if (prev.includes(questionId)) return prev;
+        const updated = [...prev, questionId];
+        const now = new Date();
+        const todayStart = startOfDay(now);
+        const last = lastBlazeAt ? new Date(lastBlazeAt) : null;
+        let newStreak = streak;
+        if (!last) newStreak = 1;
+        else {
+          const lastStart = startOfDay(last);
+          const diff = Math.floor(
+            (todayStart.getTime() - lastStart.getTime()) / 86400000
+          );
+          if (diff === 1) newStreak = Math.max(1, newStreak) + 1;
+          else if (diff > 1) newStreak = 1;
+          else newStreak = Math.max(1, newStreak);
+        }
+        setStreak(newStreak);
+        const newLast = now.toISOString();
+        setLastBlazeAt(newLast);
+        if (progressId) {
+          updateUserProgress({
+            id: progressId,
+            answeredQuestions: updated,
+            dailyStreak: newStreak,
+            lastBlazeAt: newLast,
+          }).catch((e) => console.warn('Failed to persist answer', e));
+        }
+        return updated;
+      });
+    },
+    [progressId, streak, lastBlazeAt]
+  );
+
   const markCampaignComplete = useCallback(
     async (campaignId: string) => {
       setCompletedCampaigns((prev) =>
@@ -177,9 +236,16 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   }, []);
 
   useEffect(() => {
-    const snapshot = { xp, level, streak, completedSections, completedCampaigns };
+    const snapshot = {
+      xp,
+      level,
+      streak,
+      completedSections,
+      completedCampaigns,
+      answeredQuestions,
+    };
     listeners.current.forEach((fn) => fn(snapshot));
-  }, [xp, level, streak, completedSections, completedCampaigns]);
+  }, [xp, level, streak, completedSections, completedCampaigns, answeredQuestions]);
 
   const value: ProgressContextValue = {
     xp,
@@ -187,9 +253,11 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     streak,
     completedSections,
     completedCampaigns,
+    answeredQuestions,
     awardXP,
     markSectionComplete,
     markCampaignComplete,
+    markQuestionAnswered,
     subscribe,
   };
 

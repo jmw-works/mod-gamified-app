@@ -10,24 +10,35 @@ interface CampaignCanvasProps {
 
 export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
   const { activeCampaignId: campaignId } = useActiveCampaign();
+
   const {
     questions,
-    progress,
     handleAnswer,
     sectionTextByNumber,
+    loading,
+    error,
   } = useCampaignQuizData(userId, campaignId);
 
-  const { awardXP, markSectionComplete, markCampaignComplete } = useProgress();
+  const {
+    awardXP,
+    markSectionComplete,
+    markCampaignComplete,
+    answeredQuestions,
+    completedSections,
+  } = useProgress();
+
   const { profile } = useUserProfile();
 
   const [index, setIndex] = useState(0);
 
-  // Reset when campaign or question set changes
+  // Reset index when campaign or questions change
   useEffect(() => {
     setIndex(0);
   }, [campaignId, questions.length]);
 
   if (!campaignId) return <div>Select a campaign to begin.</div>;
+  if (loading) return <div>Loading campaign…</div>;
+  if (error) return <div>Error loading campaign: {error.message}</div>;
   if (!questions.length) return <div>No questions found for this campaign.</div>;
   if (index >= questions.length)
     return <div>Campaign complete, {profile?.displayName ?? 'Friend'}!</div>;
@@ -42,10 +53,12 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
     await handleAnswer({ questionId: current.id, isCorrect, xp: current.xpValue ?? undefined });
 
     if (isCorrect) {
-      const alreadyAnswered = progress?.answeredQuestions.includes(current.id);
-      if (!alreadyAnswered) awardXP(current.xpValue ?? 0);
+      const alreadyAnswered = answeredQuestions.includes(current.id);
+      if (!alreadyAnswered) {
+        awardXP(current.xpValue ?? 0);
+      }
 
-      const answered = new Set(progress?.answeredQuestions ?? []);
+      const answered = new Set(answeredQuestions);
       answered.add(current.id);
 
       const sectionQs = questions.filter((q) => q.section === current.section);
@@ -54,8 +67,9 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
       if (allAnswered && current.section != null) {
         markSectionComplete(current.section);
 
-        const completed = new Set(progress?.completedSections ?? []);
+        const completed = new Set(completedSections);
         completed.add(current.section);
+
         const allSections = new Set(questions.map((q) => q.section));
         if ([...allSections].every((n) => completed.has(n))) {
           markCampaignComplete(campaignId);
@@ -68,7 +82,7 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
 
   return (
     <div data-campaign-id={campaignId ?? ''} data-user-id={userId}>
-      {sectionText ? <p>{sectionText}</p> : null}
+      {sectionText && <p>{sectionText}</p>}
 
       <div className="question-item">
         <p>{current.text}</p>
@@ -81,4 +95,5 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
     </div>
   );
 }
+
 
