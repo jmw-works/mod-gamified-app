@@ -14,6 +14,8 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
     progress,
     handleAnswer,
     sectionTextByNumber,
+    loading,
+    error,
   } = useCampaignQuizData(userId, campaignId);
 
   const { awardXP, markSectionComplete, markCampaignComplete } = useProgress();
@@ -26,6 +28,8 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
   }, [campaignId, questions.length]);
 
   if (!campaignId) return <div>Select a campaign to begin.</div>;
+  if (loading) return <div>Loading campaign…</div>;
+  if (error) return <div>Error loading campaign: {error.message}</div>;
   if (!questions.length) return <div>No questions found for this campaign.</div>;
   if (index >= questions.length) return <div>Campaign complete!</div>;
 
