@@ -6,10 +6,12 @@ export default function XPBar({
   percent, // 0..100 (fractional allowed)
   label,
   fillColor = '#e7bb73', // gold to match header titles
+  title,
 }: {
   percent: number;
   label?: string;
   fillColor?: string;
+  title?: string;
 }) {
   const { tokens } = useTheme();
 
@@ -30,13 +32,22 @@ export default function XPBar({
       style={{ width: '100%' }}
     >
       {label && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+        <div
+          style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}
+        >
           <Text fontSize="0.85rem" color={tokens.colors.font.secondary}>
             {label}
           </Text>
-          <Text fontSize="0.85rem" color={tokens.colors.font.secondary}>
-            {shown}%
-          </Text>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {title && (
+              <Text fontSize="0.85rem" color={tokens.colors.font.secondary}>
+                {title}
+              </Text>
+            )}
+            <Text fontSize="0.85rem" color={tokens.colors.font.secondary}>
+              {shown}%
+            </Text>
+          </div>
         </div>
       )}
 

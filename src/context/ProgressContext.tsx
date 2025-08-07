@@ -24,6 +24,7 @@ import { createUserResponse } from '../services/userResponseService';
 import type { Schema } from '../../amplify/data/resource';
 import { getLevelFromXP } from '../utils/xp';
 import type { HandleAnswer, SubmitArgs } from '../types/QuestionTypes';
+import { listTitles } from '../services/titleService';
 
 type ProgressListener = (state: {
   xp: number;
@@ -32,6 +33,7 @@ type ProgressListener = (state: {
   completedSections: number[];
   completedCampaigns: string[];
   answeredQuestions: string[];
+  title: string;
 }) => void;
 
 interface ProgressContextValue {
@@ -41,6 +43,7 @@ interface ProgressContextValue {
   completedSections: number[];
   completedCampaigns: string[];
   answeredQuestions: string[];
+  title: string;
   awardXP: (amount: number) => void;
   markSectionComplete: (section: number, sectionId?: string) => Promise<void>;
   markCampaignComplete: (campaignId: string) => Promise<void>;
@@ -72,6 +75,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   const [answeredQuestions, setAnsweredQuestions] = useState<string[]>([]);
   const [lastBlazeAt, setLastBlazeAt] = useState<string | null>(null);
   const [progressId, setProgressId] = useState<string | null>(null);
+  const [titles, setTitles] = useState<Schema['Title']['type'][]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,7 +138,34 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     };
   }, [userId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTitles() {
+      try {
+        const res = await listTitles({ selectionSet: ['name', 'minLevel'] });
+        if (!cancelled) setTitles(res.data ?? []);
+      } catch (e) {
+        console.warn('Failed to load titles', e);
+      }
+    }
+    loadTitles();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const level = useMemo(() => getLevelFromXP(xp, XP_PER_LEVEL), [xp]);
+  const title = useMemo(() => {
+    if (!titles.length) return '';
+    let current: Schema['Title']['type'] | null = null;
+    for (const t of titles) {
+      const min = t.minLevel ?? 0;
+      if (level >= min && (!current || min > (current.minLevel ?? 0))) {
+        current = t;
+      }
+    }
+    return current?.name ?? '';
+  }, [titles, level]);
 
   const awardXP = useCallback(
     (amount: number) => {
@@ -351,9 +382,10 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
       completedSections,
       completedCampaigns,
       answeredQuestions,
+      title,
     };
     listeners.current.forEach((fn) => fn(snapshot));
-  }, [xp, level, streak, completedSections, completedCampaigns, answeredQuestions]);
+  }, [xp, level, streak, completedSections, completedCampaigns, answeredQuestions, title]);
 
   const value: ProgressContextValue = {
     xp,
@@ -362,6 +394,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     completedSections,
     completedCampaigns,
     answeredQuestions,
+    title,
     awardXP,
     markSectionComplete,
     markCampaignComplete,
