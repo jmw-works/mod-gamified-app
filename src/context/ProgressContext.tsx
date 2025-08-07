@@ -279,14 +279,14 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
       questionId,
       isCorrect,
       xp = 0,
-      responseText = '',
+      userAnswer = '',
       sectionId,
     }: SubmitArgs) => {
       try {
         await createUserResponse({
           userId,
           questionId,
-          responseText,
+          responseText: userAnswer,
           isCorrect,
         });
       } catch (e) {
