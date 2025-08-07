@@ -300,6 +300,55 @@ p {
   }
 }
 
+/* ============================
+   Authenticated shell layout
+============================ */
+.app-grid {
+  display: grid;
+  gap: var(--gap);
+  grid-template-areas:
+    "header header header"
+    "banner banner banner"
+    "gallery canvas stats";
+  grid-template-columns: 1fr 2fr 1fr;
+  min-height: 100vh;
+}
+
+.app-grid > .grid-header { grid-area: header; }
+.app-grid > .grid-banner { grid-area: banner; }
+.app-grid > .grid-gallery { grid-area: gallery; }
+.app-grid > .grid-canvas { grid-area: canvas; }
+.app-grid > .grid-stats { grid-area: stats; }
+
+@media (max-width: 1023px) {
+  .app-grid {
+    grid-template-areas:
+      "header"
+      "banner"
+      "gallery"
+      "canvas"
+      "stats";
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================
+   User stats panel
+============================ */
+.user-stats-panel {
+  position: sticky;
+  top: var(--top-offset);
+  max-width: 320px;
+}
+
+@media (max-width: 1023px) {
+  .user-stats-panel {
+    position: static;
+    width: 100%;
+    max-width: none;
+  }
+}
+
 
 
 

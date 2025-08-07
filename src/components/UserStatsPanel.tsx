@@ -18,6 +18,7 @@ import {
   getXPToNextLevel,
 } from '../utils/xp';
 import XPBar from './XPBar';
+import type { CSSProperties } from 'react';
 
 interface UserStatsPanelProps {
   headerHeight: number;
@@ -56,21 +57,25 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
   const levelPercent = calculateXPProgress(progressWithinLevel, XP_PER_LEVEL);
   const nextLevelIn = getXPToNextLevel(safeXP, XP_PER_LEVEL);
 
-  const containerStyle = {
-    position: 'sticky' as const,
-    top: headerHeight + spacing,
-    maxWidth: '320px',
-  };
+  const topOffset = headerHeight + spacing;
 
   if (profileLoading)
     return (
-      <View padding={spacing} style={containerStyle}>
+      <View
+        padding={spacing}
+        className="user-stats-panel"
+        style={{ '--top-offset': `${topOffset}px` } as CSSProperties}
+      >
         Loading profile…
       </View>
     );
   if (profileError)
     return (
-      <View padding={spacing} style={containerStyle}>
+      <View
+        padding={spacing}
+        className="user-stats-panel"
+        style={{ '--top-offset': `${topOffset}px` } as CSSProperties}
+      >
         Error loading profile: {profileError.message}
       </View>
     );
@@ -78,7 +83,8 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
   return (
     <View
       padding={spacing}
-      style={containerStyle}
+      className="user-stats-panel"
+      style={{ '--top-offset': `${topOffset}px` } as CSSProperties}
     >
       <Heading level={3} marginBottom="small">
         User Stats

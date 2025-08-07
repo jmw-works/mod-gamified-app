@@ -1,5 +1,5 @@
 // src/pages/AuthenticatedShell.tsx
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, CSSProperties } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { fetchUserAttributes } from 'aws-amplify/auth';
 
@@ -43,41 +43,32 @@ export default function AuthenticatedShell() {
   const headerHeight = useHeaderHeight(headerRef);
   const spacing = 24;
 
-  const gridStyle = useMemo(
-    () => ({
-      display: 'grid',
-      gridTemplateAreas: `"header header header" "banner banner banner" "gallery canvas stats"`,
-      gridTemplateColumns: '1fr 2fr 1fr',
-      gridAutoRows: 'auto',
-      minHeight: '100vh',
-      gap: spacing,
-    }),
-    [spacing]
-  );
-
   return (
     <UserProfileProvider userId={userId} email={emailFromAttrs}>
       <ActiveCampaignProvider>
         <ProgressProvider userId={userId}>
           <DisplayNamePrompt />
-          <div style={gridStyle}>
-            <div style={{ gridArea: 'header' }}>
+          <div
+            className="app-grid"
+            style={{ '--gap': `${spacing}px` } as CSSProperties}
+          >
+            <div className="grid-header">
               <HeaderBar ref={headerRef} signOut={signOut} />
             </div>
 
-            <div style={{ gridArea: 'banner' }}>
+            <div className="grid-banner">
               <AnnouncementBanner />
             </div>
 
-            <div style={{ gridArea: 'gallery' }}>
+            <div className="grid-gallery">
               <CampaignGallery campaigns={campaigns} loading={campaignsLoading} />
             </div>
 
-            <div style={{ gridArea: 'canvas' }}>
+            <div className="grid-canvas">
               <CampaignCanvas userId={userId} />
             </div>
 
-            <div style={{ gridArea: 'stats' }}>
+            <div className="grid-stats">
               <UserStatsPanelWithProfile
                 username={user?.username}
                 email={emailFromAttrs ?? undefined}
