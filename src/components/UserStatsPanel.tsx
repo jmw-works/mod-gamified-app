@@ -60,7 +60,7 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
     (typeof profile?.displayName === 'string' && profile.displayName) ||
     user?.username ||
     loginId ||
-    'N/A';
+    'Friend';
 
   const email =
     (typeof profile?.email === 'string' && profile.email) ||
