@@ -41,6 +41,7 @@ async function seedAll() {
       if (!have.has(campaignId)) {
         await createCampaign({
           id: campaignId,
+          slug: campaignId,
           title: `Campaign ${i}`,
           description: `Placeholder description for Campaign ${i}`,
           infoText: `Placeholder info for Campaign ${i}`,

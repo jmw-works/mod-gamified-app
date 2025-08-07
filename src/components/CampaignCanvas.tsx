@@ -3,7 +3,6 @@ import type { ChangeEvent, FormEvent } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
-import ProgressContext from '../context/ProgressContext';
 import UserProfileContext from '../context/UserProfileContext';
 import { listCampaigns } from '../services/campaignService';
 import SectionAccordion from './SectionAccordion';
@@ -18,11 +17,8 @@ interface CampaignCanvasProps {
 export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvasProps) {
   const { activeCampaignId: campaignId } = useActiveCampaign();
   const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
-  const { sections, loading, error } = useCampaignQuizData(campaignId);
+  const { sections, loading, error, progress, handleAnswer } = useCampaignQuizData(campaignId);
   const isGuest = authStatus !== 'authenticated' || !userId;
-
-  const progress = useContext(ProgressContext);
-  const handleAnswer = progress?.handleAnswer;
   const markSectionComplete = progress?.markSectionComplete;
   const markCampaignComplete = progress?.markCampaignComplete;
   const answeredQuestions = progress?.answeredQuestions ?? [];
