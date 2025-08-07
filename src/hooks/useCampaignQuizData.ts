@@ -76,7 +76,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
         const qRes = await listQuestions({
           ...(qFilter ? { filter: qFilter } : {}),
           selectionSet: [
-            'id', 'text', 'section', 'xpValue', 'sectionRef.number',
+            'id', 'text', 'type', 'section', 'xpValue', 'sectionRef.number',
             'correctAnswer', 'hint', 'explanation',
           ],
         });
@@ -85,6 +85,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
           const row = q as unknown as {
             id: string;
             text: string;
+            type?: 'multipleChoice' | 'written' | null;
             section?: number | null;
             sectionRef?: { number?: number | null } | null;
             xpValue?: number | null;
@@ -95,6 +96,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
           return {
             id: row.id,
             text: row.text,
+            type: (row.type ?? 'written') as 'multipleChoice' | 'written',
             section: (row.section ?? row.sectionRef?.number ?? 0) as number,
             xpValue: row.xpValue ?? 10,
             correctAnswer: row.correctAnswer,

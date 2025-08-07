@@ -6,6 +6,7 @@ export interface Question {
   id: string;
   text: string;
   section: number;
+  type: 'multipleChoice' | 'written';
   xpValue?: number | null;
   educationalText?: string;
   correctAnswer: string;
@@ -18,7 +19,6 @@ export interface SubmitArgs {
   responseText: string;
   isCorrect: boolean;
   xp?: number;
-  responseText?: string;
   sectionId?: string;
 }
 

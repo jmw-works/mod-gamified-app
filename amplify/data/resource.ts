@@ -63,6 +63,8 @@ const schema = a.schema({
       sectionRef: a.belongsTo('Section', 'sectionId'),
 
       text: a.string().required(),
+      // Default to 'written' until enum default support is available
+      type: a.string().default('written'),
       xpValue: a.integer().default(10),
       difficulty: a.enum(['easy', 'medium', 'hard']),
       order: a.integer().default(0),
