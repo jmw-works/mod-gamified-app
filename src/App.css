@@ -219,15 +219,34 @@ main {
   margin-bottom: 24px;
 }
 
-.question-item input[type="text"] {
+.question-item .answer-mask {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  background-color: var(--color-surface);
+}
+
+.question-item .answer-mask input[type="text"] {
   padding: 0.5rem;
   font-size: 1rem;
   width: 100%;
-  max-width: 500px;
   font-family: var(--font-mono);
-  background-color: var(--color-surface);
+  background-color: transparent;
   border: 1px solid var(--color-border-input);
+  color: transparent;
+  caret-color: var(--color-text);
+}
+
+.question-item .answer-mask .mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0.5rem;
+  font-size: 1rem;
+  font-family: var(--font-mono);
   color: var(--color-text);
+  pointer-events: none;
+  white-space: pre;
 }
 
 .question-item button {
