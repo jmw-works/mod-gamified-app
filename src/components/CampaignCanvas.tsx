@@ -29,15 +29,23 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const userProfile = useContext(UserProfileContext);
   const profile = userProfile?.profile ?? null;
 
-  const [sectionIndex, setSectionIndex] = useState(0);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [response, setResponse] = useState('');
   const [infoText, setInfoText] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
+  const onToggle = (idx: number) => {
+    setExpandedIndex((prev) => {
+      if (prev === idx) return null;
+      if (prev === null || idx <= prev) return idx;
+      return prev;
+    });
+  };
+
   // Reset indices when campaign or sections change
   useEffect(() => {
-    setSectionIndex(0);
+    onToggle(0);
     setQuestionIndex(0);
   }, [campaignId, sections.length]);
 
@@ -70,10 +78,13 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const sectionsWithQuestions = sections.filter((s) => s.questions.length > 0);
   if (!sectionsWithQuestions.length)
     return <div>No questions found for this campaign.</div>;
-  if (sectionIndex >= sectionsWithQuestions.length)
+  if (expandedIndex !== null && expandedIndex >= sectionsWithQuestions.length)
     return <div>Campaign complete, {profile?.displayName ?? 'Friend'}!</div>;
 
-  const currentSection = sectionsWithQuestions[sectionIndex];
+  if (expandedIndex === null)
+    return <div>Select a section to begin.</div>;
+
+  const currentSection = sectionsWithQuestions[expandedIndex];
   const current = currentSection.questions[questionIndex];
   const sectionTitle = currentSection.title;
   const sectionText = currentSection.text;
@@ -126,7 +137,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
           if (next < currentSection.questions.length) {
             return next;
           }
-          setSectionIndex((s) => s + 1);
+          setExpandedIndex((s) => (s === null ? 0 : s + 1));
           return 0;
         });
       }, 1000);
