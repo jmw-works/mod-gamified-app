@@ -17,6 +17,7 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
     sectionTextByNumber,
     loading,
     error,
+    sectionIdByNumber,
   } = useCampaignQuizData(userId, campaignId);
 
   const {
@@ -65,7 +66,8 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
       const allAnswered = sectionQs.every((q) => answered.has(q.id));
 
       if (allAnswered && current.section != null) {
-        markSectionComplete(current.section);
+        const secId = sectionIdByNumber.get(current.section);
+        markSectionComplete(current.section, secId);
 
         const completed = new Set(completedSections);
         completed.add(current.section);

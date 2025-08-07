@@ -16,6 +16,9 @@ import {
   listCampaignProgress,
   createCampaignProgress,
   updateCampaignProgress,
+  listSectionProgress,
+  createSectionProgress,
+  updateSectionProgress,
 } from '../services/progressService';
 import type { Schema } from '../../amplify/data/resource';
 import { getLevelFromXP } from '../utils/xp';
@@ -37,8 +40,8 @@ interface ProgressContextValue {
   completedCampaigns: string[];
   answeredQuestions: string[];
   awardXP: (amount: number) => void;
-  markSectionComplete: (section: number) => void;
-  markCampaignComplete: (campaignId: string) => void;
+  markSectionComplete: (section: number, sectionId?: string) => Promise<void>;
+  markCampaignComplete: (campaignId: string) => Promise<void>;
   markQuestionAnswered: (questionId: string) => void;
   subscribe: (listener: ProgressListener) => () => void;
 }
@@ -147,7 +150,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   );
 
   const markSectionComplete = useCallback(
-    (section: number) => {
+    async (section: number, sectionId?: string) => {
       setCompletedSections((prev) => {
         if (prev.includes(section)) return prev;
         const updated = [...prev, section];
@@ -159,8 +162,35 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         }
         return updated;
       });
+
+      if (sectionId) {
+        try {
+          const res = await listSectionProgress({
+            filter: {
+              and: [
+                { userId: { eq: userId } },
+                { sectionId: { eq: sectionId } },
+              ],
+            },
+            selectionSet: ['id', 'completed'],
+          });
+          const row = res.data?.[0];
+          if (row) {
+            if (!row.completed)
+              await updateSectionProgress({ id: row.id, completed: true });
+          } else {
+            await createSectionProgress({
+              userId,
+              sectionId,
+              completed: true,
+            });
+          }
+        } catch (e) {
+          console.warn('Failed to persist section progress', e);
+        }
+      }
     },
-    [progressId]
+    [progressId, userId]
   );
 
   const markQuestionAnswered = useCallback(
@@ -223,6 +253,8 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         }
       } catch (e) {
         console.warn('Failed to persist campaign progress', e);
+      } finally {
+        window.dispatchEvent(new Event('campaignProgressChanged'));
       }
     },
     [userId]

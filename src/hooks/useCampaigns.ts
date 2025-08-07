@@ -86,6 +86,14 @@ export function useCampaigns(userId?: string | null) {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const handler = () => {
+      load();
+    };
+    window.addEventListener('campaignProgressChanged', handler);
+    return () => window.removeEventListener('campaignProgressChanged', handler);
+  }, [load]);
+
   const markCampaignCompleted = useCallback(async (campaignId: string) => {
     if (!userId) return;
 

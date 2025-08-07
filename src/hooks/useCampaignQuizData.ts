@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   Question as QuestionUI,
   HandleAnswer,
@@ -7,11 +7,6 @@ import type {
 } from '../types/QuestionTypes';
 import { listSections } from '../services/sectionService';
 import { listQuestions } from '../services/questionService';
-import {
-  listSectionProgress,
-  createSectionProgress,
-  updateSectionProgress,
-} from '../services/progressService';
 import { useProgress } from '../context/ProgressContext';
 function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
   if (ids.length === 0) return undefined;
@@ -28,7 +23,7 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
   const [sectionTextByNumber, setSectionTextByNumber] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<Error | null>(null);
-  const { answeredQuestions, markQuestionAnswered } = useProgress();
+  const { markQuestionAnswered } = useProgress();
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -133,72 +128,14 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
     };
   }, [activeCampaignId, userId]);
 
-  const sectionToIds = useMemo(() => {
-    const map = new Map<number, string[]>();
-    for (const q of questions) {
-      if (typeof q.section !== 'number') continue;
-      const arr = map.get(q.section) ?? [];
-      arr.push(q.id);
-      map.set(q.section, arr);
-    }
-    return map;
-  }, [questions]);
-
-  const byId = useMemo(() => {
-    const m = new Map<string, QuestionUI>();
-    questions.forEach((q) => m.set(q.id, q));
-    return m;
-  }, [questions]);
 
   const handleAnswer: HandleAnswer = useCallback(
     async ({ questionId, isCorrect }: SubmitArgs) => {
       if (!userId || !isCorrect) return;
 
       markQuestionAnswered(questionId);
-
-      const question = byId.get(questionId);
-      const sectionNum = question?.section ?? null;
-
-      if (sectionNum != null) {
-        const qIds = sectionToIds.get(sectionNum) ?? [];
-        const answered = new Set(answeredQuestions);
-        answered.add(questionId);
-        const allAnswered = qIds.every((id) => answered.has(id));
-
-        const sectionId = sectionIdByNumber.get(sectionNum);
-        if (sectionId) {
-          const list = await listSectionProgress({
-            filter: {
-              and: [
-                { userId: { eq: userId } },
-                { sectionId: { eq: sectionId } },
-              ],
-            },
-            selectionSet: ['id', 'completed'],
-          });
-          const row = list.data?.[0] ?? null;
-          if (row) {
-            if (row.completed !== allAnswered) {
-              await updateSectionProgress({ id: row.id, completed: allAnswered });
-            }
-          } else {
-            await createSectionProgress({
-              userId,
-              sectionId,
-              completed: allAnswered,
-            });
-          }
-        }
-      }
     },
-    [
-      userId,
-      byId,
-      sectionToIds,
-      sectionIdByNumber,
-      answeredQuestions,
-      markQuestionAnswered,
-    ]
+    [userId, markQuestionAnswered]
   );
 
   return {
@@ -208,6 +145,7 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
     handleAnswer,
     orderedSectionNumbers,
     sectionTextByNumber,
+    sectionIdByNumber,
   };
 }
 
