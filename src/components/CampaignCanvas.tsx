@@ -13,11 +13,16 @@ interface CampaignCanvasProps {
   onRequireAuth?: () => void;
 }
 
-export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvasProps) {
-  const { activeCampaignId: campaignId } = useActiveCampaign();
-  const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
+  export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvasProps) {
+    const { activeCampaignId: campaignId } = useActiveCampaign();
+    const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
+    const { sections, loading, error } = useCampaignQuizData(campaignId);
 
-  const { sections, loading, error } = useCampaignQuizData(campaignId);
+    useEffect(() => {
+      if (authStatus !== 'authenticated' || !userId) {
+        onRequireAuth?.();
+      }
+    }, [authStatus, userId, onRequireAuth]);
 
   const progress = useContext(ProgressContext);
   const handleAnswer = progress?.handleAnswer;
@@ -72,7 +77,10 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     };
   }, [campaignId]);
 
-  if (!campaignId) return <div>Select a campaign to begin.</div>;
+    if (authStatus !== 'authenticated' || !userId) {
+      return <div>Please sign in to play.</div>;
+    }
+    if (!campaignId) return <div>Select a campaign to begin.</div>;
   if (loading) return <div>Loading campaign…</div>;
   if (error) return <div>Error loading campaign: {error.message}</div>;
   const sectionsWithQuestions = sections.filter((s) => s.questions.length > 0);

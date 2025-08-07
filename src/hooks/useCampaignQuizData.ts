@@ -91,9 +91,6 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
             'sectionId',
             'order',
             'xpValue',
-            'answers.id',
-            'answers.content',
-            'answers.isCorrect',
             'correctAnswer',
             'hint',
             'explanation',
@@ -106,7 +103,6 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
           sectionId?: string | null;
           order?: number | null;
           xpValue?: number | null;
-          answers?: { id: string; content: string; isCorrect?: boolean | null }[];
           correctAnswer?: string;
           hint?: string | null;
           explanation?: string | null;
@@ -133,11 +129,6 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
               correctAnswer: row.correctAnswer ?? '',
               hint: row.hint ?? undefined,
               explanation: row.explanation ?? undefined,
-              answers: (row.answers ?? []).map((ans) => ({
-                id: ans.id,
-                content: ans.content,
-                isCorrect: !!ans.isCorrect,
-              })),
             });
           }
         }

@@ -2,6 +2,9 @@
 import { useEffect, useState } from 'react';
 import { getUrl } from 'aws-amplify/storage';
 
+// Simple in-memory cache for resolved URLs
+const urlCache = new Map<string, string>();
+
 type Options = {
   key?: string | null;
   fallbackUrl?: string | null; // optional absolute URL stored in Campaign
@@ -21,13 +24,24 @@ export function useCampaignThumbnail({ key, fallbackUrl }: Options) {
         setUrl(fallbackUrl ?? null);
         return;
       }
+
+      // Serve from cache if available
+      const cached = urlCache.get(key);
+      if (cached) {
+        setUrl(cached);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
         // public level since our storage rule exposes public/*
         const result = await getUrl({ path: `public/${key}` });
         if (!cancelled) {
-          setUrl(result.url.toString());
+          const resolved = result.url.toString();
+          urlCache.set(key, resolved);
+          setUrl(resolved);
         }
       } catch (e) {
         if (!cancelled) {
