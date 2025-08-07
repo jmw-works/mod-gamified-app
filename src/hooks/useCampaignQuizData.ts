@@ -1,4 +1,3 @@
-// src/hooks/useCampaignQuizData.ts
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   Question as QuestionUI,
@@ -71,22 +70,20 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
           .sort((a, b) => (a.order ?? a.number ?? 0) - (b.order ?? b.number ?? 0));
 
         const numToId = new Map<number, string>();
-        const textMap = new Map<number, string>();
-        const orderedNums: number[] = [];
         const textByNum = new Map<number, string>();
+        const orderedNums: number[] = [];
 
         for (const s of sections) {
-  const n = (s.number ?? 0) as number;
-  numToId.set(n, s.id);
-  textByNum.set(n, s.educationalText ?? ''); // ✅ save text
-  orderedNums.push(n);
-}
+          const n = (s.number ?? 0) as number;
+          numToId.set(n, s.id);
+          textByNum.set(n, s.educationalText ?? '');
+          orderedNums.push(n);
+        }
 
         if (cancelled) return;
         setSectionIdByNumber(numToId);
-        setSectionTextByNumber(textMap);
-        setOrderedSectionNumbers(orderedNums);
         setSectionTextByNumber(textByNum);
+        setOrderedSectionNumbers(orderedNums);
 
         const sectionIds = sections.map((s) => s.id);
         if (sectionIds.length === 0) {
@@ -166,10 +163,6 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
     };
   }, [activeCampaignId, userId]);
 
-  // Progress loading and handleAnswer remain unchanged...
-
-  // [ ... existing handleAnswer and progress logic here unchanged ...]
-
   const sectionToIds = useMemo(() => {
     const map = new Map<number, string[]>();
     for (const q of questions) {
@@ -191,9 +184,8 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
     setCompletedSectionNumbers((prev) => (prev.includes(n) ? prev : [...prev, n]));
   }, []);
 
-  // existing handleAnswer logic remains here...
-
-    const handleAnswer: HandleAnswer = useCallback(async ({ questionId, isCorrect, xp }: SubmitArgs) => {
+  const handleAnswer: HandleAnswer = useCallback(
+    async ({ questionId, isCorrect, xp }: SubmitArgs) => {
     if (!progressBase || !userId) return;
     if (!isCorrect) return;
 

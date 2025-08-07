@@ -1,4 +1,3 @@
-// src/hooks/useCampaigns.ts
 import { useEffect, useState, useCallback } from 'react';
 import { listCampaigns } from '../services/campaignService';
 import {
