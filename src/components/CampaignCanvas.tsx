@@ -15,16 +15,11 @@ interface CampaignCanvasProps {
   onRequireAuth?: () => void;
 }
 
-  export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvasProps) {
-    const { activeCampaignId: campaignId } = useActiveCampaign();
-    const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
-    const { sections, loading, error } = useCampaignQuizData(campaignId);
-
-    useEffect(() => {
-      if (authStatus !== 'authenticated' || !userId) {
-        onRequireAuth?.();
-      }
-    }, [authStatus, userId, onRequireAuth]);
+export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvasProps) {
+  const { activeCampaignId: campaignId } = useActiveCampaign();
+  const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
+  const { sections, loading, error } = useCampaignQuizData(campaignId);
+  const isGuest = authStatus !== 'authenticated' || !userId;
 
   const progress = useContext(ProgressContext);
   const handleAnswer = progress?.handleAnswer;
@@ -41,8 +36,14 @@ interface CampaignCanvasProps {
   const [response, setResponse] = useState('');
   const [infoText, setInfoText] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
 
   const onToggle = (idx: number) => {
+    if (isGuest && idx > 0) {
+      onRequireAuth?.();
+      setShowSignupPrompt(true);
+      return;
+    }
     setExpandedIndex((prev) => {
       if (prev === idx) return null;
       if (prev === null || idx <= prev) return idx;
@@ -80,10 +81,11 @@ interface CampaignCanvasProps {
     };
   }, [campaignId]);
 
-    if (authStatus !== 'authenticated' || !userId) {
-      return <div>Please sign in to play.</div>;
-    }
-    if (!campaignId) return <div>Select a campaign to begin.</div>;
+  useEffect(() => {
+    if (!isGuest) setShowSignupPrompt(false);
+  }, [isGuest]);
+
+  if (!campaignId) return <div>Select a campaign to begin.</div>;
   if (loading) return <Skeleton height="200px" />;
   if (error) return <div>Error loading campaign: {error.message}</div>;
   const sectionsWithQuestions = sections.filter((s) => s.questions.length > 0);
@@ -102,8 +104,9 @@ interface CampaignCanvasProps {
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (authStatus !== 'authenticated' || !userId) {
+    if (isGuest && currentSection.number !== 1) {
       onRequireAuth?.();
+      setShowSignupPrompt(true);
       return;
     }
     const userAnswer = response.trim();
@@ -140,17 +143,23 @@ interface CampaignCanvasProps {
       }
 
       setFeedback('Correct!');
+      const isLastQuestion =
+        questionIndex + 1 >= currentSection.questions.length;
       setTimeout(() => {
         setFeedback(null);
         setResponse('');
-        setQuestionIndex((prev) => {
-          const next = prev + 1;
-          if (next < currentSection.questions.length) {
-            return next;
+        if (!isLastQuestion) {
+          setQuestionIndex((prev) => prev + 1);
+        } else {
+          if (isGuest && currentSection.number === 1) {
+            onRequireAuth?.();
+            setShowSignupPrompt(true);
+            setQuestionIndex(0);
+          } else {
+            setExpandedIndex((s) => (s === null ? 0 : s + 1));
+            setQuestionIndex(0);
           }
-          setExpandedIndex((s) => (s === null ? 0 : s + 1));
-          return 0;
-        });
+        }
       }, 1000);
     } else {
       setFeedback('Try again');
@@ -160,6 +169,9 @@ interface CampaignCanvasProps {
   return (
     <div data-campaign-id={campaignId ?? ''} data-user-id={userId}>
       {infoText && <p>{infoText}</p>}
+      {showSignupPrompt && (
+        <p className="signup-prompt">Create an account to continue.</p>
+      )}
       <SectionAccordion title={sectionTitle ?? ''} sectionId={currentSection.id}>
         {sectionText && <p className="current-section-text">{sectionText}</p>}
 
