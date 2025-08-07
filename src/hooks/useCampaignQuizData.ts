@@ -42,9 +42,10 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
 
         const sections = (sRes.data ?? [])
           .filter((s) => s.isActive !== false)
-          .sort((a, b) => (a.order ?? a.number ?? 0) - (b.order ?? b.number ?? 0));
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
         const numToId = new Map<number, string>();
+        const idToNumber = new Map<string, number>();
         // Track section educational text and titles by section number (bug fix: single source of truth)
         const textByNum = new Map<number, string>();
         const titleByNum = new Map<number, string>();
@@ -53,6 +54,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
         for (const s of sections) {
           const n = (s.number ?? 0) as number;
           numToId.set(n, s.id);
+          idToNumber.set(s.id, n);
           textByNum.set(n, s.educationalText ?? '');
           titleByNum.set(n, s.title ?? '');
           orderedNums.push(n);
@@ -76,32 +78,53 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
         const qRes = await listQuestions({
           ...(qFilter ? { filter: qFilter } : {}),
           selectionSet: [
-            'id', 'text', 'section', 'xpValue', 'sectionRef.number',
-            'answers.id', 'answers.content', 'answers.isCorrect',
+            'id',
+            'text',
+            'sectionId',
+            'order',
+            'xpValue',
+            'answers.id',
+            'answers.content',
+            'answers.isCorrect',
           ],
         });
 
-        const qs: QuestionUI[] = (qRes.data ?? []).map((q) => {
-          const row = q as unknown as {
-            id: string;
-            text: string;
-            section?: number | null;
-            sectionRef?: { number?: number | null } | null;
-            xpValue?: number | null;
-            answers?: { id: string; content: string; isCorrect?: boolean | null }[];
-          };
-          return {
-            id: row.id,
-            text: row.text,
-            section: (row.section ?? row.sectionRef?.number ?? 0) as number,
-            xpValue: row.xpValue ?? 10,
-            answers: (row.answers ?? []).map((ans) => ({
-              id: ans.id,
-              content: ans.content,
-              isCorrect: !!ans.isCorrect,
-            })),
-          };
-        });
+        type QuestionRow = {
+          id: string;
+          text: string;
+          sectionId?: string | null;
+          order?: number | null;
+          xpValue?: number | null;
+          answers?: { id: string; content: string; isCorrect?: boolean | null }[];
+        };
+
+        const bySectionId = new Map<string, QuestionRow[]>();
+        for (const q of (qRes.data ?? []) as unknown as QuestionRow[]) {
+          const sid = q.sectionId ?? '';
+          if (!bySectionId.has(sid)) bySectionId.set(sid, []);
+          bySectionId.get(sid)!.push(q);
+        }
+
+        const qs: QuestionUI[] = [];
+        for (const s of sections) {
+          const rows = bySectionId.get(s.id) ?? [];
+          rows.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          const sectionNum = idToNumber.get(s.id) ?? 0;
+          for (const row of rows) {
+            qs.push({
+              id: row.id,
+              text: row.text,
+              section: sectionNum,
+              xpValue: row.xpValue ?? 10,
+              answers: (row.answers ?? []).map((ans) => ({
+                id: ans.id,
+                content: ans.content,
+                isCorrect: !!ans.isCorrect,
+              })),
+            });
+          }
+        }
+
         if (!cancelled) setQuestions(qs);
 
       } catch (e) {
