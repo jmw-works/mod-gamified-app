@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Question as QuestionUI } from '../types/QuestionTypes';
 import { listSections } from '../services/sectionService';
 import { listQuestions } from '../services/questionService';
@@ -19,14 +19,6 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
   const [sectionTitleByNumber, setSectionTitleByNumber] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<Error | null>(null);
-
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
