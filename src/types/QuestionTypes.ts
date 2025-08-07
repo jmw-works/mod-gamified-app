@@ -18,6 +18,8 @@ export interface SubmitArgs {
   responseText: string;
   isCorrect: boolean;
   xp?: number;
+  responseText?: string;
+  sectionId?: string;
 }
 
 export interface HandleAnswer {

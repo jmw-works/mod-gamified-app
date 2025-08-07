@@ -16,6 +16,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
   const [orderedSectionNumbers, setOrderedSectionNumbers] = useState<number[]>([]);
   const [sectionIdByNumber, setSectionIdByNumber] = useState<Map<number, string>>(new Map());
   const [sectionTextByNumber, setSectionTextByNumber] = useState<Map<number, string>>(new Map());
+  const [sectionTitleByNumber, setSectionTitleByNumber] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<Error | null>(null);
 
@@ -36,7 +37,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
       try {
         const sRes = await listSections({
           filter: { campaignId: { eq: campaignId } },
-          selectionSet: ['id', 'number', 'order', 'educationalText', 'isActive'],
+          selectionSet: ['id', 'number', 'order', 'educationalText', 'title', 'isActive'],
         });
 
         const sections = (sRes.data ?? [])
@@ -44,20 +45,23 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
           .sort((a, b) => (a.order ?? a.number ?? 0) - (b.order ?? b.number ?? 0));
 
         const numToId = new Map<number, string>();
-        // Track section educational text by section number (bug fix: single source of truth)
+        // Track section educational text and titles by section number (bug fix: single source of truth)
         const textByNum = new Map<number, string>();
+        const titleByNum = new Map<number, string>();
         const orderedNums: number[] = [];
 
         for (const s of sections) {
           const n = (s.number ?? 0) as number;
           numToId.set(n, s.id);
           textByNum.set(n, s.educationalText ?? '');
+          titleByNum.set(n, s.title ?? '');
           orderedNums.push(n);
         }
 
         if (cancelled) return;
         setSectionIdByNumber(numToId);
         setSectionTextByNumber(textByNum);
+        setSectionTitleByNumber(titleByNum);
         setOrderedSectionNumbers(orderedNums);
 
         const sectionIds = sections.map((s) => s.id);
@@ -112,6 +116,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
       setOrderedSectionNumbers([]);
       setSectionIdByNumber(new Map());
       setSectionTextByNumber(new Map());
+      setSectionTitleByNumber(new Map());
       setLoading(false);
       return;
     }
@@ -128,6 +133,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
     error,
     orderedSectionNumbers,
     sectionTextByNumber,
+    sectionTitleByNumber,
     sectionIdByNumber,
   };
 }

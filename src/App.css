@@ -221,6 +221,20 @@ main {
   margin-top: 0.5rem;
 }
 
+/* Title and text styling for current quiz section */
+.current-section-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+  color: #1e2a3a;
+}
+
+.current-section-text {
+  margin: 0 0 1rem;
+  color: #555;
+  font-style: italic;
+}
+
 /* ============================
    Modal (SetDisplayNameModal)
 ============================ */

@@ -73,7 +73,6 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   const [lastBlazeAt, setLastBlazeAt] = useState<string | null>(null);
   const [progressId, setProgressId] = useState<string | null>(null);
 
-  // Load progress from backend
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -104,11 +103,12 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         setProgressId(row.id);
         setXP(row.totalXP ?? 0);
         setStreak(row.dailyStreak ?? 0);
+        setLastBlazeAt(row.lastBlazeAt ?? null);
+
         const answered = (row.answeredQuestions ?? []).filter(
           (id): id is string => typeof id === 'string'
         );
         setAnsweredQuestions(answered);
-        setLastBlazeAt(row.lastBlazeAt ?? null);
 
         const sections = (row.completedSections ?? []).filter(
           (n): n is number => typeof n === 'number'
@@ -217,35 +217,90 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   );
 
   const markQuestionAnswered = useCallback(
-    (questionId: string) => {
-      setAnsweredQuestions((prev) => {
-        if (prev.includes(questionId)) return prev;
-        const updated = [...prev, questionId];
-        if (progressId) {
-          updateUserProgress({
-            id: progressId,
-            answeredQuestions: updated,
-          }).catch((e) => console.warn('Failed to persist answer', e));
-        }
-        return updated;
-      });
+    (questionId: string, sectionId?: string, isCorrect?: boolean) => {
+      if (isCorrect) {
+        setAnsweredQuestions((prev) => {
+          if (prev.includes(questionId)) return prev;
+          const updated = [...prev, questionId];
+          if (progressId) {
+            updateUserProgress({
+              id: progressId,
+              answeredQuestions: updated,
+            }).catch((e) => console.warn('Failed to persist answer', e));
+          }
+          return updated;
+        });
+      }
+
+      if (sectionId) {
+        (async () => {
+          try {
+            const res = await listSectionProgress({
+              filter: {
+                and: [
+                  { userId: { eq: userId } },
+                  { sectionId: { eq: sectionId } },
+                ],
+              },
+              selectionSet: ['id', 'answeredQuestionIds', 'correctCount'],
+            });
+            const row = res.data?.[0];
+            const answered = row?.answeredQuestionIds ?? [];
+            const updatedAnswered = answered.includes(questionId)
+              ? answered
+              : [...answered, questionId];
+            const newCount = (row?.correctCount ?? 0) + (isCorrect ? 1 : 0);
+            if (row) {
+              await updateSectionProgress({
+                id: row.id,
+                answeredQuestionIds: updatedAnswered,
+                correctCount: newCount,
+              });
+            } else {
+              await createSectionProgress({
+                userId,
+                sectionId,
+                answeredQuestionIds: [questionId],
+                correctCount: isCorrect ? 1 : 0,
+                completed: false,
+              });
+            }
+          } catch (e) {
+            console.warn('Failed to persist question progress', e);
+          }
+        })();
+      }
     },
-    [progressId]
+    [progressId, userId]
   );
 
   const handleAnswer: HandleAnswer = useCallback(
-    async ({ questionId, responseText, isCorrect, xp = 0 }: SubmitArgs) => {
-      createUserResponse({
-        userId,
-        questionId,
-        responseText,
-        isCorrect,
-      }).catch((e) => console.warn('Failed to record response', e));
+    async ({
+      questionId,
+      isCorrect,
+      xp = 0,
+      responseText = '',
+      sectionId,
+    }: SubmitArgs) => {
+      try {
+        await createUserResponse({
+          userId,
+          questionId,
+          responseText,
+          isCorrect,
+        });
+      } catch (e) {
+        console.warn('Failed to persist user response', e);
+      }
+
+      markQuestionAnswered(questionId, sectionId, isCorrect);
 
       if (!isCorrect) return;
+
       const alreadyAnswered = answeredQuestions.includes(questionId);
-      if (!alreadyAnswered) awardXP(xp);
-      markQuestionAnswered(questionId);
+      if (!alreadyAnswered) {
+        awardXP(xp);
+      }
     },
     [answeredQuestions, awardXP, markQuestionAnswered, userId]
   );
@@ -324,4 +379,5 @@ export function useProgress() {
 }
 
 export default ProgressContext;
+
 

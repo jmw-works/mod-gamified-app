@@ -12,6 +12,7 @@ const schema = a.schema({
       slug: a.string().required(),
       title: a.string().required(),
       description: a.string(),
+      infoText: a.string(),
       order: a.integer().default(0),
       isActive: a.boolean().default(true),
 
@@ -141,6 +142,18 @@ const schema = a.schema({
       userId: a.string().required(),
       campaignId: a.id().required(),
       completed: a.boolean().default(false),
+    })
+    .authorization((allow) => [
+      allow.owner().to(['create', 'read', 'update', 'delete']),
+    ]),
+
+  UserResponse: a
+    .model({
+      id: a.id().required(),
+      userId: a.string().required(),
+      questionId: a.id().required(),
+      responseText: a.string(),
+      isCorrect: a.boolean().default(false),
     })
     .authorization((allow) => [
       allow.owner().to(['create', 'read', 'update', 'delete']),

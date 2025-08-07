@@ -4,6 +4,7 @@ import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useProgress } from '../context/ProgressContext';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import { useUserProfile } from '../context/UserProfileContext';
+import { listCampaigns } from '../services/campaignService';
 
 interface CampaignCanvasProps {
   userId: string;
@@ -14,8 +15,14 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const { activeCampaignId: campaignId } = useActiveCampaign();
   const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
 
-  const { questions, sectionTextByNumber, loading, error, sectionIdByNumber } =
-    useCampaignQuizData(campaignId);
+  const {
+    questions,
+    sectionTextByNumber,
+    sectionTitleByNumber,
+    loading,
+    error,
+    sectionIdByNumber,
+  } = useCampaignQuizData(campaignId);
 
   const {
     handleAnswer,
@@ -29,11 +36,35 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
 
   const [index, setIndex] = useState(0);
   const [response, setResponse] = useState('');
+  const [infoText, setInfoText] = useState<string | null>(null);
 
   // Reset index when campaign or questions change
   useEffect(() => {
     setIndex(0);
   }, [campaignId, questions.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadInfo() {
+      if (!campaignId) {
+        if (!cancelled) setInfoText(null);
+        return;
+      }
+      try {
+        const res = await listCampaigns({
+          filter: { id: { eq: campaignId } },
+          selectionSet: ['id', 'infoText'],
+        });
+        if (!cancelled) setInfoText(res.data?.[0]?.infoText ?? null);
+      } catch {
+        if (!cancelled) setInfoText(null);
+      }
+    }
+    loadInfo();
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId]);
 
   if (!campaignId) return <div>Select a campaign to begin.</div>;
   if (loading) return <div>Loading campaign…</div>;
@@ -43,21 +74,28 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     return <div>Campaign complete, {profile?.displayName ?? 'Friend'}!</div>;
 
   const current = questions[index];
-  const sectionText = current.section ? sectionTextByNumber.get(current.section) : undefined;
+  const sectionTitle = current.section
+    ? sectionTitleByNumber.get(current.section)
+    : undefined;
+  const sectionText = current.section
+    ? sectionTextByNumber.get(current.section)
+    : undefined;
 
   const onSubmit = async () => {
     if (authStatus !== 'authenticated' || !userId) {
       onRequireAuth?.();
       return;
     }
+
     const isCorrect =
-      response.trim().toLowerCase() === current.correctAnswer.trim().toLowerCase();
+      response.trim().toLowerCase() === current.correctAnswer?.trim().toLowerCase();
 
     await handleAnswer({
       questionId: current.id,
       responseText: response,
       isCorrect,
       xp: current.xpValue ?? undefined,
+      sectionId: sectionIdByNumber.get(current.section),
     });
 
     if (isCorrect) {
@@ -87,7 +125,9 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
 
   return (
     <div data-campaign-id={campaignId ?? ''} data-user-id={userId}>
-      {sectionText && <p>{sectionText}</p>}
+      {infoText && <p>{infoText}</p>}
+      {sectionTitle && <h3 className="current-section-title">{sectionTitle}</h3>}
+      {sectionText && <p className="current-section-text">{sectionText}</p>}
 
       <div className="question-item">
         <p>{current.text}</p>
@@ -101,5 +141,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     </div>
   );
 }
+
+
 
 
