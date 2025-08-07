@@ -24,3 +24,20 @@ export interface Progress {
   handleAnswer: HandleAnswer;
   subscribe: (listener: ProgressEventListener) => () => void;
 }
+
+export function createEmptyProgress(): Progress {
+  return {
+    xp: 0,
+    level: 0,
+    streak: 0,
+    completedSections: [],
+    completedCampaigns: [],
+    answeredQuestions: [],
+    title: '',
+    awardXP: () => {},
+    markSectionComplete: async () => {},
+    markCampaignComplete: async () => {},
+    handleAnswer: async () => {},
+    subscribe: () => () => {},
+  };
+}
