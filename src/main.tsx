@@ -14,13 +14,15 @@ import './App.css';
  * Calling configure multiple times is generally okay, but during Vite HMR this
  * guard avoids noisy reconfiguration warnings or timing issues.
  */
-(function configureAmplifyOnce() {
-  const g = (globalThis as any);
-  if (!g.__AMPLIFY_CONFIGURED__) {
-    Amplify.configure(outputs);
-    g.__AMPLIFY_CONFIGURED__ = true;
-  }
-})();
+ (function configureAmplifyOnce() {
+   const g: { __AMPLIFY_CONFIGURED__?: boolean } = globalThis as unknown as {
+     __AMPLIFY_CONFIGURED__?: boolean;
+   };
+   if (!g.__AMPLIFY_CONFIGURED__) {
+     Amplify.configure(outputs);
+     g.__AMPLIFY_CONFIGURED__ = true;
+   }
+ })();
 
 const rootEl = document.getElementById('root');
 if (!rootEl) {

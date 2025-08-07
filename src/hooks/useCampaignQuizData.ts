@@ -71,6 +71,7 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
           .sort((a, b) => (a.order ?? a.number ?? 0) - (b.order ?? b.number ?? 0));
 
         const numToId = new Map<number, string>();
+        // Track section educational text by section number (bug fix: single source of truth)
         const textByNum = new Map<number, string>();
         const orderedNums: number[] = [];
 

@@ -1,17 +1,22 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, Button, Heading, Text } from '@aws-amplify/ui-react';
-import { ProgressContext } from '../contexts/ProgressContext';
+import { useProgress } from '../context/ProgressContext';
 
 type AnnouncementBannerProps = {
   /** Optional callback when a level up occurs. Useful for analytics. */
   onLevelUp?: (level: number) => void;
+  /** Optional callback when the banner is dismissed. */
+  onDismiss?: () => void;
 };
 
-export default function AnnouncementBanner({ onLevelUp }: AnnouncementBannerProps) {
-  const progress = useContext(ProgressContext);
-  const prevLevel = useRef(progress?.level ?? 1);
-  const prevCompleted = useRef(progress?.completedSectionsCount ?? 0);
-  const prevXP = useRef(progress?.currentXP ?? 0);
+const XP_PER_LEVEL = 100;
+
+export default function AnnouncementBanner({ onLevelUp, onDismiss }: AnnouncementBannerProps) {
+  const { xp, level, completedSections } = useProgress();
+
+  const prevLevel = useRef(level);
+  const prevCompleted = useRef(completedSections.length);
+  const prevXP = useRef(xp);
 
   const [dismissed, setDismissed] = useState(false);
   const [title, setTitle] = useState<string | null>(null);
@@ -19,28 +24,25 @@ export default function AnnouncementBanner({ onLevelUp }: AnnouncementBannerProp
   const [indicator, setIndicator] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!progress) return;
-
     let newTitle: string | null = null;
     let newDesc: string | null = null;
     let newIndicator: string | null = null;
-    if (progress.level > prevLevel.current) {
+
+    if (level > prevLevel.current) {
       newTitle = 'Level up!';
-      newDesc = `Level ${progress.level} achieved!`;
-      newIndicator = String(progress.level);
-      onLevelUp?.(progress.level);
-    } else if (progress.completedSectionsCount > prevCompleted.current) {
-      const count = progress.completedSectionsCount;
+      newDesc = `Level ${level} achieved!`;
+      newIndicator = String(level);
+      onLevelUp?.(level);
+    } else if (completedSections.length > prevCompleted.current) {
+      const count = completedSections.length;
       newTitle = 'Achievement unlocked!';
       newDesc = `${count} completed section${count === 1 ? '' : 's'}!`;
       newIndicator = '✓';
-    } else if (progress.currentXP > prevXP.current) {
-      const pct = Math.max(
-        0,
-        Math.min(100, Math.round((progress.currentXP / Math.max(1, progress.maxXP)) * 100))
-      );
+    } else if (xp > prevXP.current) {
+      const currentXP = xp % XP_PER_LEVEL;
+      const pct = Math.max(0, Math.min(100, Math.round((currentXP / XP_PER_LEVEL) * 100)));
       newTitle = 'Leveling up!';
-      newDesc = `You’ve earned ${progress.currentXP} XP toward ${progress.maxXP}. Keep going to unlock the next section.`;
+      newDesc = `You’ve earned ${currentXP} XP toward ${XP_PER_LEVEL}. Keep going to unlock the next section.`;
       newIndicator = `${pct}%`;
     }
 
@@ -51,16 +53,10 @@ export default function AnnouncementBanner({ onLevelUp }: AnnouncementBannerProp
       setDismissed(false);
     }
 
-    prevLevel.current = progress.level;
-    prevCompleted.current = progress.completedSectionsCount;
-    prevXP.current = progress.currentXP;
-  }, [
-    progress?.level,
-    progress?.completedSectionsCount,
-    progress?.currentXP,
-    progress?.maxXP,
-    onLevelUp,
-  ]);
+    prevLevel.current = level;
+    prevCompleted.current = completedSections.length;
+    prevXP.current = xp;
+  }, [xp, level, completedSections, onLevelUp]);
 
   if (dismissed || !title) return null;
 
@@ -101,7 +97,13 @@ export default function AnnouncementBanner({ onLevelUp }: AnnouncementBannerProp
           {description && <Text>{description}</Text>}
         </div>
 
-        <Button onClick={() => setDismissed(true)} variation="link">
+        <Button
+          onClick={() => {
+            setDismissed(true);
+            onDismiss?.();
+          }}
+          variation="link"
+        >
           Dismiss
         </Button>
       </div>
