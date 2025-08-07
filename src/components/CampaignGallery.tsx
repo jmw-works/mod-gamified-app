@@ -1,25 +1,15 @@
 // src/components/CampaignGallery.tsx
 import { memo, type CSSProperties } from 'react';
+import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
+import { useCampaigns, type UICampaign } from '../hooks/useCampaigns';
 import { useCampaignThumbnail } from '../hooks/useCampaignThumbnail';
 
 
-export type CampaignCard = {
-  id: string;
-  title: string;
-  description?: string | null;
-  order?: number | null;
-  isActive?: boolean | null;
-  locked?: boolean; // from useCampaigns hook
-  // Thumbnails
+// Optional thumbnail props for campaigns
+type CampaignCard = UICampaign & {
   thumbnailKey?: string | null;
-  thumbnailUrl?: string | null;
   thumbnailAlt?: string | null;
-};
-
-type Props = {
-  campaigns: CampaignCard[];
-  loading?: boolean;
 };
 
 const containerStyle: CSSProperties = {
@@ -124,7 +114,10 @@ function CampaignCardView({
   );
 }
 
-function CampaignGalleryInner({ campaigns, loading }: Props) {
+function CampaignGalleryInner() {
+  const { user } = useAuthenticator((ctx) => [ctx.user]);
+  const userId = user?.userId;
+  const { campaigns, loading } = useCampaigns(userId);
   const { activeCampaignId, setActiveCampaignId } = useActiveCampaign();
   if (loading) return <div>Loading campaigns…</div>;
   if (!campaigns?.length) return <div>No campaigns yet.</div>;
