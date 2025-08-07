@@ -18,13 +18,8 @@ export default function AnnouncementBanner({ onLevelUp, onDismiss }: Announcemen
   const currentRef = useRef<ProgressEvent | null>(null);
   const dismissedRef = useRef(false);
 
-  useEffect(() => {
-    currentRef.current = current;
-  }, [current]);
-
-  useEffect(() => {
-    dismissedRef.current = dismissed;
-  }, [dismissed]);
+  currentRef.current = current;
+  dismissedRef.current = dismissed;
 
   useEffect(() => {
     const unsub = subscribe((evt) => {
@@ -37,7 +32,7 @@ export default function AnnouncementBanner({ onLevelUp, onDismiss }: Announcemen
         queue.current.push(evt);
       }
     });
-    return unsub;
+    return () => unsub();
   }, [subscribe]);
 
   useEffect(() => {
