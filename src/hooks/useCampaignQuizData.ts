@@ -1,8 +1,8 @@
-
 import { useEffect, useRef, useState } from 'react';
 import type { Question as QuestionUI } from '../types/QuestionTypes';
 import { listSections } from '../services/sectionService';
 import { listQuestions } from '../services/questionService';
+
 function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
   if (ids.length === 0) return undefined;
   if (ids.length === 1) return { [fieldName]: { eq: ids[0] } } as Record<string, unknown>;
@@ -28,9 +28,9 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
     };
   }, []);
 
-
   useEffect(() => {
     let cancelled = false;
+
     async function loadContentForCampaign(campaignId: string) {
       setLoading(true);
       setErr(null);
@@ -42,10 +42,10 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
 
         const sections = (sRes.data ?? [])
           .filter((s) => s.isActive !== false)
-          .sort((a, b) => (a.order ?? a.number ?? 0) - (b.order ?? b.number ?? 0));
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
         const numToId = new Map<number, string>();
-        // Track section educational text and titles by section number (bug fix: single source of truth)
+        const idToNumber = new Map<string, number>();
         const textByNum = new Map<number, string>();
         const titleByNum = new Map<number, string>();
         const orderedNums: number[] = [];
@@ -53,6 +53,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
         for (const s of sections) {
           const n = (s.number ?? 0) as number;
           numToId.set(n, s.id);
+          idToNumber.set(s.id, n);
           textByNum.set(n, s.educationalText ?? '');
           titleByNum.set(n, s.title ?? '');
           orderedNums.push(n);
@@ -66,9 +67,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
 
         const sectionIds = sections.map((s) => s.id);
         if (sectionIds.length === 0) {
-          if (!cancelled) {
-            setQuestions([]);
-          }
+          if (!cancelled) setQuestions([]);
           return;
         }
 
@@ -76,34 +75,63 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
         const qRes = await listQuestions({
           ...(qFilter ? { filter: qFilter } : {}),
           selectionSet: [
-            'id', 'text', 'section', 'xpValue', 'sectionRef.number',
-            'correctAnswer', 'hint', 'explanation',
+            'id',
+            'text',
+            'sectionId',
+            'order',
+            'xpValue',
+            'answers.id',
+            'answers.content',
+            'answers.isCorrect',
+            'correctAnswer',
+            'hint',
+            'explanation',
           ],
         });
 
-        const qs: QuestionUI[] = (qRes.data ?? []).map((q) => {
-          const row = q as unknown as {
-            id: string;
-            text: string;
-            section?: number | null;
-            sectionRef?: { number?: number | null } | null;
-            xpValue?: number | null;
-            correctAnswer: string;
-            hint?: string | null;
-            explanation?: string | null;
-          };
-          return {
-            id: row.id,
-            text: row.text,
-            section: (row.section ?? row.sectionRef?.number ?? 0) as number,
-            xpValue: row.xpValue ?? 10,
-            correctAnswer: row.correctAnswer,
-            hint: row.hint ?? undefined,
-            explanation: row.explanation ?? undefined,
-          };
-        });
-        if (!cancelled) setQuestions(qs);
+        type QuestionRow = {
+          id: string;
+          text: string;
+          sectionId?: string | null;
+          order?: number | null;
+          xpValue?: number | null;
+          answers?: { id: string; content: string; isCorrect?: boolean | null }[];
+          correctAnswer?: string;
+          hint?: string | null;
+          explanation?: string | null;
+        };
 
+        const bySectionId = new Map<string, QuestionRow[]>();
+        for (const q of (qRes.data ?? []) as QuestionRow[]) {
+          const sid = q.sectionId ?? '';
+          if (!bySectionId.has(sid)) bySectionId.set(sid, []);
+          bySectionId.get(sid)!.push(q);
+        }
+
+        const qs: QuestionUI[] = [];
+        for (const s of sections) {
+          const rows = bySectionId.get(s.id) ?? [];
+          rows.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          const sectionNum = idToNumber.get(s.id) ?? 0;
+          for (const row of rows) {
+            qs.push({
+              id: row.id,
+              text: row.text,
+              section: sectionNum,
+              xpValue: row.xpValue ?? 10,
+              correctAnswer: row.correctAnswer ?? '',
+              hint: row.hint ?? undefined,
+              explanation: row.explanation ?? undefined,
+              answers: (row.answers ?? []).map((ans) => ({
+                id: ans.id,
+                content: ans.content,
+                isCorrect: !!ans.isCorrect,
+              })),
+            });
+          }
+        }
+
+        if (!cancelled) setQuestions(qs);
       } catch (e) {
         if (!cancelled) setErr(e as Error);
       } finally {
@@ -137,6 +165,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
     sectionIdByNumber,
   };
 }
+
 
 
 
