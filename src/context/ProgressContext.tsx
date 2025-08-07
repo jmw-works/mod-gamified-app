@@ -22,6 +22,7 @@ import {
 } from '../services/progressService';
 import type { Schema } from '../../amplify/data/resource';
 import { getLevelFromXP } from '../utils/xp';
+import type { HandleAnswer, SubmitArgs } from '../types/QuestionTypes';
 
 type ProgressListener = (state: {
   xp: number;
@@ -42,7 +43,7 @@ interface ProgressContextValue {
   awardXP: (amount: number) => void;
   markSectionComplete: (section: number, sectionId?: string) => Promise<void>;
   markCampaignComplete: (campaignId: string) => Promise<void>;
-  markQuestionAnswered: (questionId: string) => void;
+  handleAnswer: HandleAnswer;
   subscribe: (listener: ProgressListener) => () => void;
 }
 
@@ -231,6 +232,16 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     [progressId]
   );
 
+  const handleAnswer: HandleAnswer = useCallback(
+    ({ questionId, isCorrect, xp = 0 }: SubmitArgs) => {
+      if (!isCorrect) return;
+      const alreadyAnswered = answeredQuestions.includes(questionId);
+      if (!alreadyAnswered) awardXP(xp);
+      markQuestionAnswered(questionId);
+    },
+    [answeredQuestions, awardXP, markQuestionAnswered]
+  );
+
   const markCampaignComplete = useCallback(
     async (campaignId: string) => {
       setCompletedCampaigns((prev) =>
@@ -291,7 +302,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     awardXP,
     markSectionComplete,
     markCampaignComplete,
-    markQuestionAnswered,
+    handleAnswer,
     subscribe,
   };
 
