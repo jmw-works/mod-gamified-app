@@ -3,7 +3,7 @@ import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 
 import AuthenticatedShell from './pages/AuthenticatedShell';
-import { ActiveCampaignProvider } from './hooks/useActiveCampaign';
+import { ActiveCampaignProvider } from './hooks/ActiveCampaignProvider';
 
 function AuthHeader() {
   return (
