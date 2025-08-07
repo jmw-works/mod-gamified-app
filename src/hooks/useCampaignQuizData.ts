@@ -12,6 +12,8 @@ import {
   createSectionProgress,
   updateSectionProgress,
   updateUserProgress,
+  listUserProgress,
+  createUserProgress,
 } from '../services/progressService';
 
 type ProgressShape = {
@@ -54,6 +56,56 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
       mountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setProgressBase(null);
+    async function loadUserProgressRow(uid: string) {
+      if (!uid) {
+        return;
+      }
+      try {
+        const res = await listUserProgress({
+          filter: { userId: { eq: uid } },
+          selectionSet: [
+            'id',
+            'userId',
+            'totalXP',
+            'answeredQuestions',
+            'dailyStreak',
+            'lastBlazeAt',
+          ],
+        });
+        let row = res.data?.[0] ?? null;
+        if (!row) {
+          const createRes = await createUserProgress({
+            userId: uid,
+            totalXP: 0,
+            answeredQuestions: [],
+            dailyStreak: 0,
+            lastBlazeAt: null,
+          });
+          row = createRes.data ?? null;
+        }
+        if (!cancelled && row) {
+          setProgressBase({
+            id: row.id,
+            userId: row.userId,
+            totalXP: row.totalXP ?? 0,
+            answeredQuestions: row.answeredQuestions ?? [],
+            dailyStreak: row.dailyStreak ?? 0,
+            lastBlazeAt: row.lastBlazeAt ?? null,
+          });
+        }
+      } catch (e) {
+        if (!cancelled) setErr(e as Error);
+      }
+    }
+    loadUserProgressRow(userId);
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
