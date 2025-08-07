@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useProgress } from '../context/ProgressContext';
@@ -37,6 +38,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const [index, setIndex] = useState(0);
   const [response, setResponse] = useState('');
   const [infoText, setInfoText] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   // Reset index when campaign or questions change
   useEffect(() => {
@@ -81,18 +83,20 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     ? sectionTextByNumber.get(current.section)
     : undefined;
 
-  const onSubmit = async () => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (authStatus !== 'authenticated' || !userId) {
       onRequireAuth?.();
       return;
     }
-
+    const userAnswer = response.trim();
     const isCorrect =
-      response.trim().toLowerCase() === current.correctAnswer?.trim().toLowerCase();
+      userAnswer.toLowerCase() ===
+      current.correctAnswer?.trim().toLowerCase();
 
     await handleAnswer({
       questionId: current.id,
-      responseText: response,
+      userAnswer,
       isCorrect,
       xp: current.xpValue ?? undefined,
       sectionId: sectionIdByNumber.get(current.section),
@@ -117,10 +121,16 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
           markCampaignComplete(campaignId);
         }
       }
-    }
 
-    setResponse('');
-    setIndex((prev) => prev + 1);
+      setFeedback('Correct!');
+      setTimeout(() => {
+        setFeedback(null);
+        setResponse('');
+        setIndex((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setFeedback('Try again');
+    }
   };
 
   return (
@@ -131,12 +141,14 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
 
       <div className="question-item">
         <p>{current.text}</p>
-        <input
-          type="text"
-          value={response}
-          onChange={(e) => setResponse(e.target.value)}
-        />
-        <button onClick={onSubmit}>Submit</button>
+        <form onSubmit={onSubmit}>
+          <textarea
+            value={response}
+            onChange={(e) => setResponse(e.target.value)}
+          />
+          <button type="submit">Submit</button>
+        </form>
+        {feedback && <p className="answer-feedback">{feedback}</p>}
       </div>
     </div>
   );

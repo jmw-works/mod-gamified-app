@@ -15,10 +15,9 @@ export interface Question {
 
 export interface SubmitArgs {
   questionId: string;
-  responseText: string;
+  userAnswer: string;
   isCorrect: boolean;
   xp?: number;
-  responseText?: string;
   sectionId?: string;
 }
 
