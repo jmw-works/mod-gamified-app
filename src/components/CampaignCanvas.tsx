@@ -1,20 +1,17 @@
 import { useContext, useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import ProgressContext from '../context/ProgressContext';
 import UserProfileContext from '../context/UserProfileContext';
 import { listCampaigns } from '../services/campaignService';
+import SectionAccordion from './SectionAccordion';
 
 interface CampaignCanvasProps {
   userId: string;
-  onRequireAuth?: () => void;
 }
 
-export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvasProps) {
+export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
   const { activeCampaignId: campaignId } = useActiveCampaign();
-  const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
 
   const {
     questions,
@@ -23,27 +20,24 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     loading,
     error,
     sectionIdByNumber,
+    orderedSectionNumbers,
   } = useCampaignQuizData(campaignId);
 
   const progress = useContext(ProgressContext);
-  const handleAnswer = progress?.handleAnswer;
   const markSectionComplete = progress?.markSectionComplete;
   const markCampaignComplete = progress?.markCampaignComplete;
-  const answeredQuestions = progress?.answeredQuestions ?? [];
-  const completedSections = progress?.completedSections ?? [];
 
   const userProfile = useContext(UserProfileContext);
   const profile = userProfile?.profile ?? null;
 
-  const [index, setIndex] = useState(0);
-  const [response, setResponse] = useState('');
   const [infoText, setInfoText] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState(0);
+  const [campaignDone, setCampaignDone] = useState(false);
 
-  // Reset index when campaign or questions change
   useEffect(() => {
-    setIndex(0);
-  }, [campaignId, questions.length]);
+    setExpandedIndex(0);
+    setCampaignDone(false);
+  }, [campaignId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,89 +65,52 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   if (!campaignId) return <div>Select a campaign to begin.</div>;
   if (loading) return <div>Loading campaign…</div>;
   if (error) return <div>Error loading campaign: {error.message}</div>;
-  if (!questions.length) return <div>No questions found for this campaign.</div>;
-  if (index >= questions.length)
-    return <div>Campaign complete, {profile?.displayName ?? 'Friend'}!</div>;
 
-  const current = questions[index];
-  const sectionTitle = current.section
-    ? sectionTitleByNumber.get(current.section)
-    : undefined;
-  const sectionText = current.section
-    ? sectionTextByNumber.get(current.section)
-    : undefined;
+  const sections = orderedSectionNumbers.map((num) => ({
+    number: num,
+    title: sectionTitleByNumber.get(num) ?? '',
+    text: sectionTextByNumber.get(num) ?? '',
+    sectionId: sectionIdByNumber.get(num),
+    questions: questions.filter((q) => q.section === num),
+  }));
 
-  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (authStatus !== 'authenticated' || !userId) {
-      onRequireAuth?.();
-      return;
-    }
-    const userAnswer = response.trim();
-    const isCorrect =
-      userAnswer.toLowerCase() ===
-      current.correctAnswer?.trim().toLowerCase();
+  if (!sections.length) return <div>No questions found for this campaign.</div>;
 
-    await handleAnswer?.({
-      questionId: current.id,
-      userAnswer,
-      isCorrect,
-      xp: current.xpValue ?? undefined,
-      sectionId: sectionIdByNumber.get(current.section),
-    });
-
-    if (isCorrect) {
-      const answered = new Set(answeredQuestions);
-      answered.add(current.id);
-
-      const sectionQs = questions.filter((q) => q.section === current.section);
-      const allAnswered = sectionQs.every((q) => answered.has(q.id));
-
-      if (allAnswered && current.section != null) {
-        const secId = sectionIdByNumber.get(current.section);
-        markSectionComplete?.(current.section, secId);
-
-        const completed = new Set(completedSections);
-        completed.add(current.section);
-
-        const allSections = new Set(questions.map((q) => q.section));
-        if ([...allSections].every((n) => completed.has(n))) {
-          markCampaignComplete?.(campaignId);
-        }
-      }
-
-      setFeedback('Correct!');
-      setTimeout(() => {
-        setFeedback(null);
-        setResponse('');
-        setIndex((prev) => prev + 1);
-      }, 1000);
+  const handleSectionComplete = (index: number, sectionNum: number, sectionId?: string) => {
+    markSectionComplete?.(sectionNum, sectionId);
+    if (index === sections.length - 1) {
+      markCampaignComplete?.(campaignId);
+      setCampaignDone(true);
     } else {
-      setFeedback('Try again');
+      setExpandedIndex(index + 1);
     }
   };
+
+  if (campaignDone) {
+    return <div>Campaign complete, {profile?.displayName ?? 'Friend'}!</div>;
+  }
 
   return (
     <div data-campaign-id={campaignId ?? ''} data-user-id={userId}>
       {infoText && <p>{infoText}</p>}
-      {sectionTitle && <h3 className="current-section-title">{sectionTitle}</h3>}
-      {sectionText && <p className="current-section-text">{sectionText}</p>}
-
-      <div className="question-item">
-        <p>{current.text}</p>
-        <form onSubmit={onSubmit}>
-          <textarea
-            value={response}
-            onChange={(e) => setResponse(e.target.value)}
-          />
-          <button type="submit">Submit</button>
-        </form>
-        {feedback && <p className="answer-feedback">{feedback}</p>}
-      </div>
+      {sections.map((section, idx) => (
+        <SectionAccordion
+          key={section.number}
+          title={section.title}
+          educationalText={section.text}
+          questions={section.questions}
+          locked={idx > expandedIndex}
+          expanded={idx === expandedIndex}
+          onToggle={() => {
+            if (idx === expandedIndex) return;
+            if (idx <= expandedIndex) setExpandedIndex(idx);
+          }}
+          onComplete={() =>
+            handleSectionComplete(idx, section.number, section.sectionId)
+          }
+        />
+      ))}
     </div>
   );
 }
-
-
-
 
