@@ -6,7 +6,7 @@ export async function listCampaignProgress(
   options?: Parameters<typeof client.models.CampaignProgress.list>[0]
 ) {
   try {
-    return await client.models.CampaignProgress.list(options);
+    return await client.models.CampaignProgress.list({ authMode: 'userPool', ...options });
   } catch (err) {
     throw new ServiceError('Failed to list campaign progress', { cause: err });
   }
@@ -16,7 +16,7 @@ export async function createCampaignProgress(
   input: Parameters<typeof client.models.CampaignProgress.create>[0]
 ) {
   try {
-    return await client.models.CampaignProgress.create(input);
+    return await client.models.CampaignProgress.create(input, { authMode: 'userPool' });
   } catch (err) {
     throw new ServiceError('Failed to create campaign progress', { cause: err });
   }
@@ -26,7 +26,7 @@ export async function updateCampaignProgress(
   input: Parameters<typeof client.models.CampaignProgress.update>[0]
 ) {
   try {
-    return await client.models.CampaignProgress.update(input);
+    return await client.models.CampaignProgress.update(input, { authMode: 'userPool' });
   } catch (err) {
     throw new ServiceError('Failed to update campaign progress', { cause: err });
   }
@@ -37,7 +37,7 @@ export async function listSectionProgress(
   options?: Parameters<typeof client.models.SectionProgress.list>[0]
 ) {
   try {
-    return await client.models.SectionProgress.list(options);
+    return await client.models.SectionProgress.list({ authMode: 'userPool', ...options });
   } catch (err) {
     throw new ServiceError('Failed to list section progress', { cause: err });
   }
@@ -47,7 +47,7 @@ export async function createSectionProgress(
   input: Parameters<typeof client.models.SectionProgress.create>[0]
 ) {
   try {
-    return await client.models.SectionProgress.create(input);
+    return await client.models.SectionProgress.create(input, { authMode: 'userPool' });
   } catch (err) {
     throw new ServiceError('Failed to create section progress', { cause: err });
   }
@@ -57,7 +57,7 @@ export async function updateSectionProgress(
   input: Parameters<typeof client.models.SectionProgress.update>[0]
 ) {
   try {
-    return await client.models.SectionProgress.update(input);
+    return await client.models.SectionProgress.update(input, { authMode: 'userPool' });
   } catch (err) {
     throw new ServiceError('Failed to update section progress', { cause: err });
   }
@@ -68,7 +68,7 @@ export async function listUserProgress(
   options?: Parameters<typeof client.models.UserProgress.list>[0]
 ) {
   try {
-    return await client.models.UserProgress.list(options);
+    return await client.models.UserProgress.list({ authMode: 'userPool', ...options });
   } catch (err) {
     throw new ServiceError('Failed to list user progress', { cause: err });
   }
@@ -78,7 +78,7 @@ export async function createUserProgress(
   input: Parameters<typeof client.models.UserProgress.create>[0]
 ) {
   try {
-    return await client.models.UserProgress.create(input);
+    return await client.models.UserProgress.create(input, { authMode: 'userPool' });
   } catch (err) {
     throw new ServiceError('Failed to create user progress', { cause: err });
   }
@@ -88,7 +88,7 @@ export async function updateUserProgress(
   input: Parameters<typeof client.models.UserProgress.update>[0]
 ) {
   try {
-    return await client.models.UserProgress.update(input);
+    return await client.models.UserProgress.update(input, { authMode: 'userPool' });
   } catch (err) {
     throw new ServiceError('Failed to update user progress', { cause: err });
   }
@@ -99,7 +99,7 @@ export async function createUserResponse(
   input: Parameters<typeof client.models.UserResponse.create>[0]
 ) {
   try {
-    return await client.models.UserResponse.create(input);
+    return await client.models.UserResponse.create(input, { authMode: 'userPool' });
   } catch (err) {
     throw new ServiceError('Failed to create user response', { cause: err });
   }
@@ -109,7 +109,7 @@ export async function listUserResponses(
   options?: Parameters<typeof client.models.UserResponse.list>[0]
 ) {
   try {
-    return await client.models.UserResponse.list(options);
+    return await client.models.UserResponse.list({ authMode: 'userPool', ...options });
   } catch (err) {
     throw new ServiceError('Failed to list user responses', { cause: err });
   }

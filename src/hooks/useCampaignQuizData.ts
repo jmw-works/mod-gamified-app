@@ -52,6 +52,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
             'title',
             'isActive',
           ],
+          authMode: 'identityPool',
         });
 
         const rawSections = (sRes.data ?? [])
@@ -120,6 +121,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
             'hint',
             'explanation',
           ],
+          authMode: 'identityPool',
         });
 
         type QuestionRow = {

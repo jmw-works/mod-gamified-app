@@ -24,7 +24,9 @@ const schema = a.schema({
       sections: a.hasMany('Section', 'campaignId'),
     })
     .authorization((allow) => [
+      allow.guest().to(['read']),
       allow.authenticated().to(['read']),
+      allow.group('admin').to(['create', 'update', 'delete']),
     ]),
 
   Section: a
@@ -50,7 +52,9 @@ const schema = a.schema({
       questions: a.hasMany('Question', 'sectionId'),
     })
     .authorization((allow) => [
+      allow.guest().to(['read']),
       allow.authenticated().to(['read']),
+      allow.group('admin').to(['create', 'update', 'delete']),
     ]),
 
   Question: a
@@ -77,7 +81,9 @@ const schema = a.schema({
       responses: a.hasMany('UserResponse', 'questionId'),
     })
     .authorization((allow) => [
+      allow.guest().to(['read']),
       allow.authenticated().to(['read']),
+      allow.group('admin').to(['create', 'update', 'delete']),
     ]),
 
   Title: a
@@ -87,7 +93,9 @@ const schema = a.schema({
       minLevel: a.integer().required(),
     })
     .authorization((allow) => [
+      allow.guest().to(['read']),
       allow.authenticated().to(['read']),
+      allow.group('admin').to(['create', 'update', 'delete']),
     ]),
 
   // ------------------------------------------------------------

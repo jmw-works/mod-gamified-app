@@ -36,6 +36,7 @@ export function useCampaigns(userId?: string | null) {
       const cRes = await listCampaigns({
         filter: { isActive: { eq: true } },
         selectionSet: ['id', 'title', 'description', 'thumbnailUrl', 'order', 'isActive', 'infoText'],
+        authMode: 'identityPool',
       });
 
       const raw = (cRes.data ?? [])
@@ -48,6 +49,7 @@ export function useCampaigns(userId?: string | null) {
         const pRes = await listCampaignProgress({
           filter: { userId: { eq: userId } },
           selectionSet: ['id', 'campaignId', 'completed'],
+          authMode: 'userPool',
         });
         for (const row of pRes.data ?? []) {
           if (row.completed) completedIds.add(row.campaignId);
