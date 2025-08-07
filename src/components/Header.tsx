@@ -86,6 +86,7 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
     },
     ref
   ) => {
+    // Daily streak now comes directly from ProgressContext (updated via awardXP)
     const { xp, level, streak, completedSections } = useProgress();
     const maxXP = level * 100;
     const xpSub = `${xp}/${maxXP} XP`;
