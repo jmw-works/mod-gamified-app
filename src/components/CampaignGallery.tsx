@@ -1,5 +1,6 @@
 // src/components/CampaignGallery.tsx
 import { memo, type CSSProperties } from 'react';
+import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import { useCampaignThumbnail } from '../hooks/useCampaignThumbnail';
 
 
@@ -19,8 +20,6 @@ export type CampaignCard = {
 type Props = {
   campaigns: CampaignCard[];
   loading?: boolean;
-  activeCampaignId: string | null;
-  onSelect: (campaignId: string) => void;
 };
 
 const containerStyle: CSSProperties = {
@@ -125,12 +124,8 @@ function CampaignCardView({
   );
 }
 
-function CampaignGalleryInner({
-  campaigns,
-  loading,
-  activeCampaignId,
-  onSelect,
-}: Props) {
+function CampaignGalleryInner({ campaigns, loading }: Props) {
+  const { activeCampaignId, setActiveCampaignId } = useActiveCampaign();
   if (loading) return <div>Loading campaigns…</div>;
   if (!campaigns?.length) return <div>No campaigns yet.</div>;
 
@@ -141,7 +136,7 @@ function CampaignGalleryInner({
           key={c.id}
           c={c}
           active={c.id === activeCampaignId}
-          onClick={() => !c.locked && onSelect(c.id)}
+          onClick={() => !c.locked && setActiveCampaignId(c.id)}
         />
       ))}
     </div>
