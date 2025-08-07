@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useProgress } from '../context/ProgressContext';
+import { useActiveCampaign } from '../context/ActiveCampaignContext';
 
 interface CampaignCanvasProps {
-  campaignId: string | null;
   userId: string;
 }
 
-export default function CampaignCanvas({ campaignId, userId }: CampaignCanvasProps) {
+export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
+  const { activeCampaignId: campaignId } = useActiveCampaign();
   const {
     questions,
     progress,

@@ -13,13 +13,13 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { ProgressProvider } from '../context/ProgressContext';
+import { ActiveCampaignProvider } from '../context/ActiveCampaignContext';
 
 export default function AuthenticatedShell() {
   const { user, signOut, authStatus } = useAuthenticator((ctx) => [ctx.user, ctx.authStatus]);
   const userId = user?.userId ?? '';
 
   const [attrs, setAttrs] = useState<Record<string, string> | null>(null);
-  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -54,8 +54,9 @@ export default function AuthenticatedShell() {
   );
 
   return (
-    <ProgressProvider initialXP={profile?.experience ?? 0}>
-      <div style={gridStyle}>
+    <ActiveCampaignProvider>
+      <ProgressProvider initialXP={profile?.experience ?? 0}>
+        <div style={gridStyle}>
         <div style={{ gridArea: 'header' }}>
           <HeaderBar ref={headerRef} signOut={signOut} />
         </div>
@@ -65,16 +66,11 @@ export default function AuthenticatedShell() {
         </div>
 
         <div style={{ gridArea: 'gallery' }}>
-          <CampaignGallery
-            campaigns={campaigns}
-            loading={campaignsLoading}
-            activeCampaignId={activeCampaignId}
-            onSelect={setActiveCampaignId}
-          />
+          <CampaignGallery campaigns={campaigns} loading={campaignsLoading} />
         </div>
 
         <div style={{ gridArea: 'canvas' }}>
-          <CampaignCanvas campaignId={activeCampaignId} userId={userId} />
+          <CampaignCanvas userId={userId} />
         </div>
 
         <div style={{ gridArea: 'stats' }}>
@@ -87,8 +83,9 @@ export default function AuthenticatedShell() {
             spacing={spacing}
           />
         </div>
-      </div>
-    </ProgressProvider>
+        </div>
+      </ProgressProvider>
+    </ActiveCampaignProvider>
   );
 }
 
