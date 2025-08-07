@@ -133,17 +133,38 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 
   const awardXP = useCallback(
     (amount: number) => {
+      const now = new Date();
+      const todayStart = startOfDay(now);
+      const last = lastBlazeAt ? new Date(lastBlazeAt) : null;
+      let newStreak = streak;
+      if (!last) newStreak = 1;
+      else {
+        const lastStart = startOfDay(last);
+        const diff = Math.floor(
+          (todayStart.getTime() - lastStart.getTime()) / 86400000
+        );
+        if (diff === 1) newStreak = Math.max(1, newStreak) + 1;
+        else if (diff > 1) newStreak = 1;
+        else newStreak = Math.max(1, newStreak);
+      }
+      const newLast = now.toISOString();
+      setStreak(newStreak);
+      setLastBlazeAt(newLast);
+
       setXP((prev) => {
         const newXP = prev + amount;
         if (progressId) {
-          updateUserProgress({ id: progressId, totalXP: newXP }).catch((e) =>
-            console.warn('Failed to persist XP', e)
-          );
+          updateUserProgress({
+            id: progressId,
+            totalXP: newXP,
+            dailyStreak: newStreak,
+            lastBlazeAt: newLast,
+          }).catch((e) => console.warn('Failed to persist XP', e));
         }
         return newXP;
       });
     },
-    [progressId]
+    [progressId, lastBlazeAt, streak]
   );
 
   const markSectionComplete = useCallback(
@@ -168,35 +189,16 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
       setAnsweredQuestions((prev) => {
         if (prev.includes(questionId)) return prev;
         const updated = [...prev, questionId];
-        const now = new Date();
-        const todayStart = startOfDay(now);
-        const last = lastBlazeAt ? new Date(lastBlazeAt) : null;
-        let newStreak = streak;
-        if (!last) newStreak = 1;
-        else {
-          const lastStart = startOfDay(last);
-          const diff = Math.floor(
-            (todayStart.getTime() - lastStart.getTime()) / 86400000
-          );
-          if (diff === 1) newStreak = Math.max(1, newStreak) + 1;
-          else if (diff > 1) newStreak = 1;
-          else newStreak = Math.max(1, newStreak);
-        }
-        setStreak(newStreak);
-        const newLast = now.toISOString();
-        setLastBlazeAt(newLast);
         if (progressId) {
           updateUserProgress({
             id: progressId,
             answeredQuestions: updated,
-            dailyStreak: newStreak,
-            lastBlazeAt: newLast,
           }).catch((e) => console.warn('Failed to persist answer', e));
         }
         return updated;
       });
     },
-    [progressId, streak, lastBlazeAt]
+    [progressId]
   );
 
   const markCampaignComplete = useCallback(
