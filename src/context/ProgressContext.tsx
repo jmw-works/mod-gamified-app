@@ -41,6 +41,7 @@ interface ProgressContextValue {
   completedCampaigns: string[];
   answeredQuestions: string[];
   title: string;
+  isSectionComplete: (sectionNumber: number) => boolean;
   awardXP: (amount: number) => void;
   markSectionComplete: (section: number, sectionId?: string) => Promise<void>;
   markCampaignComplete: (campaignId: string) => Promise<void>;
@@ -331,6 +332,11 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     }
   }, [userId, completedCampaigns, emit, awardXP]);
 
+  const isSectionComplete = useCallback(
+    (sectionNumber: number) => completedSections.includes(sectionNumber),
+    [completedSections]
+  );
+
   const value: ProgressContextValue = {
     xp,
     level,
@@ -339,6 +345,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     completedCampaigns,
     answeredQuestions,
     title,
+    isSectionComplete,
     awardXP,
     markSectionComplete,
     markCampaignComplete,

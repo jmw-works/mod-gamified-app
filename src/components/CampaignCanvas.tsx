@@ -30,7 +30,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const markSectionComplete = progress?.markSectionComplete;
   const markCampaignComplete = progress?.markCampaignComplete;
   const answeredQuestions = progress?.answeredQuestions ?? [];
-  const completedSections = progress?.completedSections ?? [];
+  const isSectionComplete = progress?.isSectionComplete;
 
   const userProfile = useContext(UserProfileContext);
   const profile = userProfile?.profile ?? null;
@@ -83,6 +83,15 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     ? sectionTextByNumber.get(current.section)
     : undefined;
 
+  const isLocked =
+    current.section != null &&
+    current.section > 1 &&
+    !isSectionComplete?.(current.section - 1);
+
+  if (isLocked) {
+    return <div>Section locked. Complete previous sections to continue.</div>;
+  }
+
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (authStatus !== 'authenticated' || !userId) {
@@ -112,12 +121,11 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       if (allAnswered && current.section != null) {
         const secId = sectionIdByNumber.get(current.section);
         markSectionComplete?.(current.section, secId);
-
-        const completed = new Set(completedSections);
-        completed.add(current.section);
-
         const allSections = new Set(questions.map((q) => q.section));
-        if ([...allSections].every((n) => completed.has(n))) {
+        const allCompleted = [...allSections].every(
+          (n) => n === current.section || isSectionComplete?.(n)
+        );
+        if (allCompleted) {
           markCampaignComplete?.(campaignId);
         }
       }
