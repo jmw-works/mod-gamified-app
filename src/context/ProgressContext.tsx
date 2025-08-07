@@ -349,6 +349,25 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;
 }
 
+export function GuestProgressProvider({ children }: { children: ReactNode }) {
+  const value: ProgressContextValue = {
+    xp: 0,
+    level: 0,
+    streak: 0,
+    completedSections: [],
+    completedCampaigns: [],
+    answeredQuestions: [],
+    title: '',
+    awardXP: () => {},
+    markSectionComplete: async () => {},
+    markCampaignComplete: async () => {},
+    handleAnswer: async () => {},
+    subscribe: () => () => {},
+  };
+
+  return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;
+}
+
 export function useProgress() {
   const ctx = useContext(ProgressContext);
   if (!ctx) throw new Error('useProgress must be used within ProgressProvider');

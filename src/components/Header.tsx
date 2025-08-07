@@ -120,14 +120,16 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
 
         {/* Right: actions */}
         <div className={styles.actions}>
-          <Button
-            onClick={signOut}
-            variation="primary"
-            size="small"
-            className={styles.signOutButton}
-          >
-            Sign Out
-          </Button>
+          {signOut && (
+            <Button
+              onClick={signOut}
+              variation="primary"
+              size="small"
+              className={styles.signOutButton}
+            >
+              Sign Out
+            </Button>
+          )}
         </div>
       </header>
     );

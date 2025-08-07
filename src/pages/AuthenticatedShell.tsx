@@ -9,7 +9,6 @@ import CampaignGallery from '../components/CampaignGallery';
 import CampaignCanvas from '../components/CampaignCanvas';
 import UserStatsPanel from '../components/UserStatsPanel';
 
-import { useCampaigns } from '../hooks/useCampaigns';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { ProgressProvider } from '../context/ProgressContext';
@@ -38,7 +37,6 @@ export default function AuthenticatedShell() {
   }, [authStatus]);
 
   const emailFromAttrs = attrs?.email ?? null;
-  const { campaigns, loading: campaignsLoading } = useCampaigns(userId);
 
   const headerRef = useRef<HTMLDivElement>(null);
   const headerHeight = useHeaderHeight(headerRef);
@@ -59,7 +57,7 @@ export default function AuthenticatedShell() {
             </div>
 
             <div className="auth-gallery">
-              <CampaignGallery campaigns={campaigns} loading={campaignsLoading} />
+              <CampaignGallery />
             </div>
 
             <div className="auth-canvas">
