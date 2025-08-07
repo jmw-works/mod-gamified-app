@@ -12,6 +12,7 @@ const schema = a.schema({
       slug: a.string().required(),
       title: a.string().required(),
       description: a.string(),
+      infoText: a.string(),
       order: a.integer().default(0),
       isActive: a.boolean().default(true),
 

@@ -4,6 +4,7 @@ import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useProgress } from '../context/ProgressContext';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import { useUserProfile } from '../context/UserProfileContext';
+import { listCampaigns } from '../services/campaignService';
 
 interface CampaignCanvasProps {
   userId: string;
@@ -28,11 +29,35 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const { profile } = useUserProfile();
 
   const [index, setIndex] = useState(0);
+  const [infoText, setInfoText] = useState<string | null>(null);
 
   // Reset index when campaign or questions change
   useEffect(() => {
     setIndex(0);
   }, [campaignId, questions.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadInfo() {
+      if (!campaignId) {
+        if (!cancelled) setInfoText(null);
+        return;
+      }
+      try {
+        const res = await listCampaigns({
+          filter: { id: { eq: campaignId } },
+          selectionSet: ['id', 'infoText'],
+        });
+        if (!cancelled) setInfoText(res.data?.[0]?.infoText ?? null);
+      } catch {
+        if (!cancelled) setInfoText(null);
+      }
+    }
+    loadInfo();
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId]);
 
   if (!campaignId) return <div>Select a campaign to begin.</div>;
   if (loading) return <div>Loading campaign…</div>;
@@ -84,6 +109,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
 
   return (
     <div data-campaign-id={campaignId ?? ''} data-user-id={userId}>
+      {infoText && <p>{infoText}</p>}
       {sectionText && <p>{sectionText}</p>}
 
       <div className="question-item">
