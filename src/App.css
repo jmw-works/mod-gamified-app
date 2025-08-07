@@ -12,7 +12,7 @@ html, body, #root {
 }
 
 :root {
-  --header-height: 100px;
+  --header-height: 140px;
   --layout-gutter: 2rem;
   --root-max-width: 1280px;
   --base-font-size: 16px;
@@ -34,8 +34,6 @@ body {
   text-align: center;
 }
 
-/* If your authenticated app uses a fixed header, this keeps content from
-   sliding underneath it. It doesn't affect the unauthenticated screen. */
 main {
   padding-top: calc(var(--header-height) + 60px);
 }
@@ -315,7 +313,6 @@ p {
    Move the sign-in card down a bit
 ============================ */
 .auth-screen .amplify-authenticator {
-  /* Authenticator is a flex container that centers content; we nudge it down */
   align-items: flex-start !important;
   padding-top: 8vh !important;
 }
@@ -325,6 +322,7 @@ p {
     padding-top: 4vh !important;
   }
 }
+
 
 
 

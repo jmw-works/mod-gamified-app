@@ -1,7 +1,8 @@
 // src/components/Header.tsx
-import { forwardRef } from 'react';
-import { Button, Flex, Text } from '@aws-amplify/ui-react';
+import { forwardRef, CSSProperties, useEffect } from 'react';
+import { Button, Text } from '@aws-amplify/ui-react';
 import { useProgress } from '../context/ProgressContext';
+import styles from './Header.module.css';
 
 export interface HeaderProps {
   signOut?: () => void;
@@ -27,49 +28,20 @@ function StatPill({
   iconAlt,
   label,
   sublabel,
-  iconSize = 22,
-  labelColor = '#ffffff',
-  sublabelColor = '#e0e0e0',
 }: {
   iconSrc: string;
   iconAlt: string;
   label: string;
   sublabel?: string;
-  iconSize?: number;
-  labelColor?: string;
-  sublabelColor?: string;
 }) {
   return (
-    <Flex
-      alignItems="center"
-      gap="0.5rem"
-      padding="0.45rem 0.75rem"
-      borderRadius="9999px"
-      backgroundColor="#0f172a"
-      color={labelColor}
-      style={{
-        border: '1px solid rgba(255,255,255,0.08)',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      <img
-        src={iconSrc}
-        alt={iconAlt}
-        width={iconSize}
-        height={iconSize}
-        style={{ display: 'block', objectFit: 'contain' }}
-      />
-      <Flex direction="column" lineHeight="1.1">
-        <Text fontSize="0.85rem" fontWeight={700} color={labelColor}>
-          {label}
-        </Text>
-        {sublabel && (
-          <Text fontSize="0.72rem" color={sublabelColor}>
-            {sublabel}
-          </Text>
-        )}
-      </Flex>
-    </Flex>
+    <div className={styles.pill}>
+      <img src={iconSrc} alt={iconAlt} className={styles.pillIcon} />
+      <div className={styles.pillText}>
+        <Text className={styles.pillLabel}>{label}</Text>
+        {sublabel && <Text className={styles.pillSublabel}>{sublabel}</Text>}
+      </div>
+    </div>
   );
 }
 
@@ -92,100 +64,68 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
     const xpSub = `${xp}/${maxXP} XP`;
     const bountiesCompleted = completedSections.length;
 
+    useEffect(() => {
+      document.documentElement.style.setProperty('--header-height', `${height}px`);
+    }, [height]);
+
     return (
       <header
         ref={ref}
-        className="main-header"
+        className={styles.header}
         style={{
-          height,
-          minHeight: height,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          padding: '0 40px', // Increase/decrease this to move logo/sign-out in from edges
-          position: 'fixed',
-          inset: '0 0 auto 0',
-          backgroundColor: '#0b1526',
-          color: '#fff',
-          zIndex: 1000,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-        }}
+          '--logo-size': `${logoSize}px`,
+          '--pill-icon-size': `${iconSize}px`,
+          '--title-size': `${titleSizeRem}rem`,
+          '--pill-label-color': pillLabelColor,
+          '--pill-sublabel-color': pillSubLabelColor,
+        } as CSSProperties}
       >
         {/* Left: logo + title */}
-        <Flex alignItems="center" gap="0.75rem">
+        <div className={styles.logoTitle}>
           <img
             src="/raccoon_bounty.png"
             alt="Raccoon Bounty"
-            width={logoSize}
-            height={logoSize}
-            style={{ objectFit: 'contain', display: 'block' }}
+            className={styles.logo}
           />
-          <Text
-            as="h1"
-            fontWeight={800}
-            color="#fff"
-            margin="0"
-            lineHeight="1.1"
-            style={{ fontSize: `${titleSizeRem}rem`, letterSpacing: 0.2 }}
-          >
+          <Text as="h1" className={styles.title}>
             Raccoon Bounty |{' '}
-            <span style={{ color: '#e7bb73', fontWeight: 800 }}>Treasure Hunting Gym</span>
+            <span className={styles.titleHighlight}>Treasure Hunting Gym</span>
           </Text>
-        </Flex>
+        </div>
 
         {/* Center: stat pills */}
-        <Flex
-          alignItems="center"
-          justifyContent="center"
-          gap="0.75rem"
-          style={{ minWidth: 0, flex: '1 1 auto' }}
-        >
+        <div className={styles.pills}>
           <StatPill
             iconSrc="/raccoon.png"
             iconAlt="Experience"
             label={`Level ${level}`}
             sublabel={xpSub}
-            iconSize={iconSize}
-            labelColor={pillLabelColor}
-            sublabelColor={pillSubLabelColor}
           />
           <StatPill
             iconSrc="/totem.png"
             iconAlt="Bounties completed"
             label={`${bountiesCompleted} completed`}
             sublabel="bounties"
-            iconSize={iconSize}
-            labelColor={pillLabelColor}
-            sublabelColor={pillSubLabelColor}
           />
           <StatPill
             iconSrc="/blaze.png"
             iconAlt="Daily streak"
             label={`${streak} day blaze`}
             sublabel="daily streak"
-            iconSize={iconSize}
-            labelColor={pillLabelColor}
-            sublabelColor={pillSubLabelColor}
           />
-        </Flex>
+        </div>
 
         {/* Right: actions */}
-        <Flex alignItems="center" gap="0.75rem">
+        <div className={styles.actions}>
           <Button
             onClick={signOut}
             variation="primary"
             size="small"
-            style={{
-              backgroundColor: '#e7bb73',
-              border: 'none',
-              color: '#eef1f3ff',
-              fontWeight: 600,
-            }}
+            className={styles.signOutButton}
           >
             Sign Out
           </Button>
-        </Flex>
+        </div>
       </header>
     );
   }

@@ -1,5 +1,7 @@
 // src/components/CampaignGallery.tsx
-import { memo, type CSSProperties, useEffect } from 'react';
+import { memo, type CSSProperties, useEffect, useRef } from 'react';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import './CampaignGallery.css';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import { useCampaigns, type UICampaign } from '../hooks/useCampaigns';
@@ -14,16 +16,11 @@ type CampaignCard = UICampaign & {
 };
 
 const containerStyle: CSSProperties = {
-  display: 'flex',
-  gap: 12,
-  overflowX: 'auto',
-  padding: '8px 0',
-  scrollbarWidth: 'thin',
+  width: 'clamp(180px, 80vw, 100%)',
 };
 
 const cardStyle: CSSProperties = {
-  minWidth: 220,
-  maxWidth: 240,
+  width: 'clamp(180px, 40vw, 240px)',
   flex: '0 0 auto',
   borderRadius: 12,
   border: '1px solid #E5E7EB',
@@ -37,7 +34,7 @@ const cardStyle: CSSProperties = {
 
 const thumbStyle: CSSProperties = {
   width: '100%',
-  height: 120,
+  height: 'clamp(100px, 20vw, 160px)',
   objectFit: 'cover',
   background: '#F3F4F6',
 };
@@ -121,6 +118,11 @@ function CampaignGalleryInner() {
   const { campaigns, loading, error, refresh } = useCampaigns(userId);
   const { activeCampaignId, setActiveCampaignId } = useActiveCampaign();
   const { completedCampaigns } = useProgress();
+  const galleryRef = useRef<HTMLDivElement>(null);
+
+  const scrollBy = (offset: number) => {
+    galleryRef.current?.scrollBy({ left: offset, behavior: 'smooth' });
+  };
 
   // Refresh campaigns whenever progress changes (unlocking new ones)
   useEffect(() => {
@@ -146,15 +148,36 @@ function CampaignGalleryInner() {
   if (!campaigns?.length) return <div>No campaigns yet.</div>;
 
   return (
-    <div style={containerStyle}>
-      {campaigns.map((c) => (
-        <CampaignCardView
-          key={c.id}
-          c={c}
-          active={c.id === activeCampaignId}
-          onClick={() => !c.locked && setActiveCampaignId(c.id)}
-        />
-      ))}
+    <div className="gallery-wrapper">
+      <button
+        className="gallery-nav-button"
+        aria-label="Scroll left"
+        onClick={() => scrollBy(-240)}
+      >
+        <FaChevronLeft />
+      </button>
+      <div
+        className="campaign-gallery"
+        style={containerStyle}
+        ref={galleryRef}
+        tabIndex={0}
+      >
+        {campaigns.map((c) => (
+          <CampaignCardView
+            key={c.id}
+            c={c}
+            active={c.id === activeCampaignId}
+            onClick={() => !c.locked && setActiveCampaignId(c.id)}
+          />
+        ))}
+      </div>
+      <button
+        className="gallery-nav-button"
+        aria-label="Scroll right"
+        onClick={() => scrollBy(240)}
+      >
+        <FaChevronRight />
+      </button>
     </div>
   );
 }
