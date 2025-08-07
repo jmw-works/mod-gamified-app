@@ -22,9 +22,6 @@ function startOfDay(d: Date) {
   t.setHours(0, 0, 0, 0);
   return t;
 }
-function toStringArray(a: (string | null | undefined)[] | null | undefined): string[] {
-  return (a ?? []).filter((x): x is string => typeof x === 'string');
-}
 function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
   if (ids.length === 0) return undefined;
   if (ids.length === 1) return { [fieldName]: { eq: ids[0] } } as any;
@@ -66,20 +63,18 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
           .sort((a, b) => (a.order ?? a.number ?? 0) - (b.order ?? b.number ?? 0));
 
         const numToId = new Map<number, string>();
-        const textMap = new Map<number, string>();
         const orderedNums: number[] = [];
         const textByNum = new Map<number, string>();
 
         for (const s of sections) {
-  const n = (s.number ?? 0) as number;
-  numToId.set(n, s.id);
-  textByNum.set(n, s.educationalText ?? ''); // ✅ save text
-  orderedNums.push(n);
-}
+          const n = (s.number ?? 0) as number;
+          numToId.set(n, s.id);
+          textByNum.set(n, s.educationalText ?? '');
+          orderedNums.push(n);
+        }
 
         if (cancelled) return;
         setSectionIdByNumber(numToId);
-        setSectionTextByNumber(textMap);
         setOrderedSectionNumbers(orderedNums);
         setSectionTextByNumber(textByNum);
 
