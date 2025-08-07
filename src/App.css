@@ -11,25 +11,51 @@ html, body, #root {
   height: 100%;
 }
 
+:root {
+  --header-height: 100px;
+  --layout-gutter: 2rem;
+  --root-max-width: 1280px;
+  --base-font-size: 16px;
+}
+
 body {
   margin: 0;
   padding: 0;
   font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size: var(--base-font-size);
   background-color: #f8f9fa;
   color: #111827;
 }
 
 #root {
-  max-width: 1280px;
+  max-width: var(--root-max-width);
   margin: 0 auto;
-  padding: 0;
+  padding: 0 var(--layout-gutter);
   text-align: center;
 }
 
 /* If your authenticated app uses a fixed header, this keeps content from
    sliding underneath it. It doesn't affect the unauthenticated screen. */
 main {
-  padding-top: 160px;
+  padding-top: calc(var(--header-height) + 60px);
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --header-height: clamp(80px, 8vw, 100px);
+    --layout-gutter: clamp(1rem, 2vw, 2rem);
+    --root-max-width: 960px;
+    --base-font-size: clamp(15px, 1.5vw, 16px);
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --header-height: clamp(60px, 10vw, 80px);
+    --layout-gutter: clamp(0.5rem, 4vw, 1rem);
+    --root-max-width: 100%;
+    --base-font-size: clamp(14px, 3vw, 15px);
+  }
 }
 
 /* ============================
@@ -43,8 +69,8 @@ main {
   z-index: 1000;
   background-color: #1e2a3a;
   color: white;
-  height: 100px;
-  padding: 0 2rem;
+  height: var(--header-height);
+  padding: 0 var(--layout-gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;
