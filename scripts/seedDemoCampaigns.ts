@@ -507,21 +507,31 @@ async function seedDemoCampaigns() {
       console.log(`Skipping existing campaign ${c.slug}`);
       continue;
     }
-    const campaign = await client.models.Campaign.create({
+    const campaignRes = await client.models.Campaign.create({
       slug: c.slug,
       title: c.title,
       description: c.description,
       order,
     });
+    const campaign = campaignRes.data;
+    if (!campaign) {
+      console.error('Failed to create campaign', c.slug);
+      continue;
+    }
     let sectionNumber = 1;
     for (const s of c.sections) {
-      const section = await client.models.Section.create({
+      const sectionRes = await client.models.Section.create({
         campaignId: campaign.id,
         number: sectionNumber,
         title: s.title,
         educationalText: s.educationalText,
         order: sectionNumber,
       });
+      const section = sectionRes.data;
+      if (!section) {
+        console.error('Failed to create section', s.title);
+        continue;
+      }
       let questionOrder = 1;
       for (const q of s.questions) {
         await client.models.Question.create({

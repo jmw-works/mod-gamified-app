@@ -1,10 +1,12 @@
 // src/pages/PublicShell.tsx
+import { Suspense, lazy } from 'react';
 import { ActiveCampaignProvider } from '../context/ActiveCampaignContext';
 import { GuestProgressProvider } from '../context/ProgressContext';
 import { Header as HeaderBar } from '../components/Header';
 import AnnouncementBanner from '../components/AnnouncementBanner';
-import CampaignGallery from '../components/CampaignGallery';
-import CampaignCanvas from '../components/CampaignCanvas';
+import Skeleton from '../components/Skeleton';
+const CampaignGallery = lazy(() => import('../components/CampaignGallery'));
+const CampaignCanvas = lazy(() => import('../components/CampaignCanvas'));
 import styles from './PublicShell.module.css';
 
 interface PublicShellProps {
@@ -23,10 +25,14 @@ export default function PublicShell({ onRequireAuth }: PublicShellProps) {
             <AnnouncementBanner />
           </div>
           <div className={styles.galleryArea}>
-            <CampaignGallery />
+            <Suspense fallback={<Skeleton height="180px" />}>
+              <CampaignGallery />
+            </Suspense>
           </div>
           <div className={styles.canvasArea}>
-            <CampaignCanvas onRequireAuth={onRequireAuth} />
+            <Suspense fallback={<Skeleton height="200px" />}>
+              <CampaignCanvas onRequireAuth={onRequireAuth} />
+            </Suspense>
           </div>
         </div>
       </GuestProgressProvider>
