@@ -1,21 +1,16 @@
 // src/components/LevelUpBanner.tsx
 import { Card, Button, Heading, Text } from '@aws-amplify/ui-react';
+import { useProgress } from '../context/ProgressContext';
 
 type LevelUpBannerProps = {
-  currentXP: number;
-  maxXP: number;
   onDismiss?: () => void;
 };
 
-export default function LevelUpBanner({
-  currentXP,
-  maxXP,
-  onDismiss,
-}: LevelUpBannerProps) {
-  const pct = Math.max(
-    0,
-    Math.min(100, Math.round((currentXP / Math.max(1, maxXP)) * 100))
-  );
+export default function LevelUpBanner({ onDismiss }: LevelUpBannerProps) {
+  const { xp, level } = useProgress();
+  const maxXP = 100;
+  const currentXP = xp - (level - 1) * maxXP;
+  const pct = Math.max(0, Math.min(100, Math.round((currentXP / Math.max(1, maxXP)) * 100)));
 
   return (
     <Card
