@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Card, Button, Heading, Text } from '@aws-amplify/ui-react';
 import { useProgress, type ProgressEvent } from '../context/ProgressContext';
+import styles from './AnnouncementBanner.module.css';
 
 type AnnouncementBannerProps = {
   /** Optional callback when a level up occurs. Useful for analytics. */
@@ -75,32 +76,16 @@ export default function AnnouncementBanner({ onLevelUp, onDismiss }: Announcemen
       borderRadius="l"
       boxShadow="medium"
       marginBottom="large"
-      style={{
-        background: '#f9fbfd',
-        border: '2px solid #3776ff',
-        textAlign: 'center',
-        padding: 16,
-      }}
+      className={styles.bannerCard}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className={styles.bannerContent}>
         {indicator && (
-          <div
-            aria-hidden
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 12,
-              display: 'grid',
-              placeItems: 'center',
-              border: '2px solid #3776ff',
-              fontWeight: 800,
-            }}
-          >
+          <div aria-hidden className={styles.indicator}>
             {indicator}
           </div>
         )}
-        <div style={{ textAlign: 'left', flex: 1 }}>
-          <Heading level={4} style={{ margin: 0 }}>
+        <div className={styles.textBlock}>
+          <Heading level={4} className={styles.title}>
             {title}
           </Heading>
           {description && <Text>{description}</Text>}

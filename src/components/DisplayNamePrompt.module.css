@@ -1,0 +1,9 @@
+.form {
+  display: flex;
+  gap: var(--space-xs, 8px);
+}
+
+.error {
+  color: var(--color-error, red);
+  margin-top: var(--space-xs, 8px);
+}

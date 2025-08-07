@@ -9,6 +9,7 @@ import {
   Badge,
   useAuthenticator,
 } from '@aws-amplify/ui-react';
+import { useEffect, useRef } from 'react';
 import { useProgress } from '../context/ProgressContext';
 import { useUserProfile } from '../context/UserProfileContext';
 import {
@@ -18,6 +19,7 @@ import {
   getXPToNextLevel,
 } from '../utils/xp';
 import XPBar from './XPBar';
+import styles from './UserStatsPanel.module.css';
 
 interface UserStatsPanelProps {
   headerHeight: number;
@@ -26,6 +28,14 @@ interface UserStatsPanelProps {
 
 export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanelProps) {
   const { tokens } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    containerRef.current?.style.setProperty(
+      '--user-stats-top',
+      `${headerHeight + spacing}px`
+    );
+  }, [headerHeight, spacing]);
   const { xp, level, title } = useProgress();
   const {
     profile,
@@ -62,27 +72,21 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
         );
   const nextLevelIn = level >= 160 ? 0 : getXPToNextLevel(safeXP);
 
-  const containerStyle = {
-    position: 'sticky' as const,
-    top: headerHeight + spacing,
-    maxWidth: '320px',
-  };
-
   if (profileLoading)
     return (
-      <View padding={spacing} style={containerStyle}>
+      <View padding={spacing} className={styles.container} ref={containerRef}>
         Loading profile…
       </View>
     );
   if (profileError)
     return (
-      <View padding={spacing} style={containerStyle}>
+      <View padding={spacing} className={styles.container} ref={containerRef}>
         Error loading profile: {profileError.message}
       </View>
     );
 
   return (
-    <View padding={spacing} style={containerStyle}>
+    <View padding={spacing} className={styles.container} ref={containerRef}>
       <Heading level={3} marginBottom="small">
         User Stats
       </Heading>
@@ -123,19 +127,13 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
         gap="0.25rem"
         padding="0.75rem"
         borderRadius="0.75rem"
-        style={{
-          background: 'rgba(231,187,115,0.12)',
-          border: '1px solid rgba(231,187,115,0.35)',
-        }}
+        className={styles.currentTitleBox}
         marginBottom="small"
       >
         <Text fontSize="0.85rem" color={tokens.colors.font.secondary}>
           Current Title
         </Text>
-        <Text
-          fontWeight={800}
-          style={{ fontSize: '1.05rem', color: '#e7bb73', lineHeight: 1.1 }}
-        >
+        <Text fontWeight={800} className={styles.titleText}>
           {title}
         </Text>
       </Flex>

@@ -1,5 +1,5 @@
 // src/components/Header.tsx
-import { forwardRef, CSSProperties, useEffect } from 'react';
+import { forwardRef, useEffect } from 'react';
 import { Button, Text } from '@aws-amplify/ui-react';
 import { useProgress } from '../context/ProgressContext';
 import styles from './Header.module.css';
@@ -65,21 +65,24 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
     const bountiesCompleted = completedSections.length;
 
     useEffect(() => {
-      document.documentElement.style.setProperty('--header-height', `${height}px`);
-    }, [height]);
+      const root = document.documentElement;
+      root.style.setProperty('--header-height', `${height}px`);
+      root.style.setProperty('--logo-size', `${logoSize}px`);
+      root.style.setProperty('--pill-icon-size', `${iconSize}px`);
+      root.style.setProperty('--title-size', `${titleSizeRem}rem`);
+      root.style.setProperty('--pill-label-color', pillLabelColor);
+      root.style.setProperty('--pill-sublabel-color', pillSubLabelColor);
+    }, [
+      height,
+      logoSize,
+      iconSize,
+      titleSizeRem,
+      pillLabelColor,
+      pillSubLabelColor,
+    ]);
 
     return (
-      <header
-        ref={ref}
-        className={styles.header}
-        style={{
-          '--logo-size': `${logoSize}px`,
-          '--pill-icon-size': `${iconSize}px`,
-          '--title-size': `${titleSizeRem}rem`,
-          '--pill-label-color': pillLabelColor,
-          '--pill-sublabel-color': pillSubLabelColor,
-        } as CSSProperties}
-      >
+      <header ref={ref} className={styles.header}>
         {/* Left: logo + title */}
         <div className={styles.logoTitle}>
           <img

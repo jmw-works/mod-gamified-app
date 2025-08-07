@@ -1,0 +1,31 @@
+.bannerCard {
+  background: var(--banner-bg, #f9fbfd);
+  border: 2px solid var(--banner-border, #3776ff);
+  text-align: center;
+  padding: var(--space-md, 16px);
+}
+
+.bannerContent {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md, 16px);
+}
+
+.indicator {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--banner-border, #3776ff);
+  font-weight: 800;
+}
+
+.textBlock {
+  text-align: left;
+  flex: 1;
+}
+
+.title {
+  margin: 0;
+}

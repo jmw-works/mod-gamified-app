@@ -1,0 +1,16 @@
+.container {
+  position: sticky;
+  top: var(--user-stats-top);
+  max-width: 320px;
+}
+
+.currentTitleBox {
+  background: var(--stats-bg, rgba(231, 187, 115, 0.12));
+  border: 1px solid var(--stats-border, rgba(231, 187, 115, 0.35));
+}
+
+.titleText {
+  font-size: 1.05rem;
+  color: var(--color-accent, #e7bb73);
+  line-height: 1.1;
+}
