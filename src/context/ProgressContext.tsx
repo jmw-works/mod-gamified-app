@@ -182,7 +182,14 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 
               // Persist section progress details if provided
               if (guest.sectionProgress && typeof guest.sectionProgress === 'object') {
-                for (const [sectionId, val] of Object.entries(guest.sectionProgress as Record<string, any>)) {
+                for (const [sectionId, raw] of Object.entries(
+                  guest.sectionProgress as Record<string, unknown>
+                )) {
+                  const val = raw as {
+                    answeredQuestionIds?: unknown;
+                    correctCount?: unknown;
+                    completed?: unknown;
+                  };
                   try {
                     const spRes = await listSectionProgress({
                       filter: {
@@ -195,9 +202,12 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
                     });
                     const rowSP = spRes.data?.[0];
                     const answered = Array.isArray(val.answeredQuestionIds)
-                      ? val.answeredQuestionIds.filter((id: unknown): id is string => typeof id === 'string')
+                      ? val.answeredQuestionIds.filter(
+                          (id: unknown): id is string => typeof id === 'string'
+                        )
                       : [];
-                    const correct = typeof val.correctCount === 'number' ? val.correctCount : 0;
+                    const correct =
+                      typeof val.correctCount === 'number' ? val.correctCount : 0;
                     const completed = Boolean(val.completed);
 
                     if (rowSP) {
@@ -266,7 +276,9 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
               // Optional notification
               try {
                 window.dispatchEvent(new Event('guestProgressImported'));
-              } catch {}
+              } catch {
+                /* noop */
+              }
             } catch (err) {
               console.warn('Failed to merge guest progress', err);
             }

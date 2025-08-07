@@ -8,6 +8,10 @@
   cursor: pointer;
 }
 
+.completed {
+  border-left: 4px solid #c9a40e;
+}
+
 .arrow {
   width: 0;
   height: 0;
@@ -24,4 +28,15 @@
 .locked {
   opacity: 0.5;
   pointer-events: none;
+}
+
+.icons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.check {
+  color: #c9a40e;
+  font-size: 1rem;
 }

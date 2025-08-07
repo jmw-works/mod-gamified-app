@@ -7,12 +7,14 @@ import {
 } from 'react';
 import type { HandleAnswer, SubmitArgs } from '../types/QuestionTypes';
 import styles from './SectionAccordion.module.css';
+import { FaCheckCircle } from 'react-icons/fa';
 
 interface SectionAccordionProps {
   title: string;
   children: ReactNode;
   locked?: boolean;
   sectionId?: string;
+  completed?: boolean;
 }
 
 export default function SectionAccordion({
@@ -20,11 +22,13 @@ export default function SectionAccordion({
   children,
   locked = false,
   sectionId,
+  completed = false,
 }: SectionAccordionProps) {
   const [expanded, setExpanded] = useState(false);
   const headerClasses = [styles.header];
   if (expanded) headerClasses.push(styles.expanded);
   if (locked) headerClasses.push(styles.locked);
+  if (completed) headerClasses.push(styles.completed);
 
   const enhancedChildren = expanded
     ? Children.map(children, (child) => {
@@ -50,7 +54,10 @@ export default function SectionAccordion({
         disabled={locked}
       >
         <span>{title}</span>
-        <span className={styles.arrow} aria-hidden />
+        <div className={styles.icons}>
+          {completed && <FaCheckCircle className={styles.check} aria-hidden />}
+          <span className={styles.arrow} aria-hidden />
+        </div>
       </button>
       {expanded && <div>{enhancedChildren}</div>}
     </section>

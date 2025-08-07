@@ -37,6 +37,8 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const [infoText, setInfoText] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
+  const [answerState, setAnswerState] =
+    useState<'idle' | 'correct' | 'incorrect'>('idle');
 
   const onToggle = (idx: number) => {
     if (isGuest && idx > 0) {
@@ -114,6 +116,8 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       userAnswer.toLowerCase() ===
       current.correctAnswer?.trim().toLowerCase();
 
+    setAnswerState(isCorrect ? 'correct' : 'incorrect');
+
     await handleAnswer?.({
       questionId: current.id,
       userAnswer,
@@ -148,6 +152,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       setTimeout(() => {
         setFeedback(null);
         setResponse('');
+        setAnswerState('idle');
         if (!isLastQuestion) {
           setQuestionIndex((prev) => prev + 1);
         } else {
@@ -163,6 +168,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       }, 1000);
     } else {
       setFeedback('Try again');
+      setTimeout(() => setAnswerState('idle'), 600);
     }
   };
 
@@ -172,7 +178,11 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       {showSignupPrompt && (
         <p className="signup-prompt">Create an account to continue.</p>
       )}
-      <SectionAccordion title={sectionTitle ?? ''} sectionId={currentSection.id}>
+      <SectionAccordion
+        title={sectionTitle ?? ''}
+        sectionId={currentSection.id}
+        completed={completedSections.includes(currentSection.number)}
+      >
         {sectionText && <p className="current-section-text">{sectionText}</p>}
 
         <div className="question-item">
@@ -182,7 +192,13 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
               value={response}
               onChange={(e) => setResponse(e.target.value)}
             />
-            <button type="submit">Submit</button>
+            <button
+              type="submit"
+              className={`submit-btn ${answerState}`}
+              disabled={answerState === 'correct'}
+            >
+              {answerState === 'correct' ? 'Correct' : 'Submit'}
+            </button>
           </form>
           {feedback && <p className="answer-feedback">{feedback}</p>}
         </div>

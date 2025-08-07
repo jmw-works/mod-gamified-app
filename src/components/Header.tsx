@@ -1,5 +1,5 @@
 // src/components/Header.tsx
-import { forwardRef, useEffect } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import { Button, Text } from '@aws-amplify/ui-react';
 import { useProgress } from '../context/ProgressContext';
 import styles from './Header.module.css';
@@ -28,14 +28,16 @@ function StatPill({
   iconAlt,
   label,
   sublabel,
+  animate = false,
 }: {
   iconSrc: string;
   iconAlt: string;
   label: string;
   sublabel?: string;
+  animate?: boolean;
 }) {
   return (
-    <div className={styles.pill}>
+    <div className={`${styles.pill} ${animate ? styles.pillPulse : ''}`}>
       <img src={iconSrc} alt={iconAlt} className={styles.pillIcon} />
       <div className={styles.pillText}>
         <Text className={styles.pillLabel}>{label}</Text>
@@ -63,6 +65,59 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
     const maxXP = level * 100;
     const xpSub = `${xp}/${maxXP} XP`;
     const bountiesCompleted = completedSections.length;
+
+    const [levelAnim, setLevelAnim] = useState(false);
+    const [bountyAnim, setBountyAnim] = useState(false);
+    const [streakAnim, setStreakAnim] = useState(false);
+    const prevLevel = useRef(level);
+    const prevBounty = useRef(bountiesCompleted);
+    const prevStreak = useRef(streak);
+
+    useEffect(() => {
+      if (level !== prevLevel.current) {
+        setLevelAnim(true);
+        prevLevel.current = level;
+        interface ConfettiModule {
+          default: (options: {
+            particleCount: number;
+            spread: number;
+            origin: { y: number };
+          }) => void;
+        }
+        import('https://cdn.skypack.dev/canvas-confetti')
+          .then((mod: ConfettiModule) =>
+            mod.default({
+              particleCount: 80,
+              spread: 70,
+              origin: { y: 0.6 },
+            })
+          )
+          .catch(() => {});
+        const t = setTimeout(() => setLevelAnim(false), 800);
+        return () => clearTimeout(t);
+      }
+      return undefined;
+    }, [level]);
+
+    useEffect(() => {
+      if (bountiesCompleted !== prevBounty.current) {
+        setBountyAnim(true);
+        prevBounty.current = bountiesCompleted;
+        const t = setTimeout(() => setBountyAnim(false), 800);
+        return () => clearTimeout(t);
+      }
+      return undefined;
+    }, [bountiesCompleted]);
+
+    useEffect(() => {
+      if (streak !== prevStreak.current) {
+        setStreakAnim(true);
+        prevStreak.current = streak;
+        const t = setTimeout(() => setStreakAnim(false), 800);
+        return () => clearTimeout(t);
+      }
+      return undefined;
+    }, [streak]);
 
     useEffect(() => {
       const root = document.documentElement;
@@ -103,18 +158,21 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
             iconAlt="Experience"
             label={`Level ${level}`}
             sublabel={xpSub}
+            animate={levelAnim}
           />
           <StatPill
             iconSrc="/totem.png"
             iconAlt="Bounties completed"
             label={`${bountiesCompleted} completed`}
             sublabel="bounties"
+            animate={bountyAnim}
           />
           <StatPill
             iconSrc="/blaze.png"
             iconAlt="Daily streak"
             label={`${streak} day blaze`}
             sublabel="daily streak"
+            animate={streakAnim}
           />
         </div>
 
