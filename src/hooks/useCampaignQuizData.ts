@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Question as QuestionUI } from '../types/QuestionTypes';
 import { listSections } from '../services/sectionService';
 import { listQuestions } from '../services/questionService';
+import { fallbackSectionsByCampaign } from '../utils/fallbackContent';
 
 export interface QuizSection {
   number: number;
@@ -43,6 +44,43 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
         const rawSections = (sRes.data ?? [])
           .filter((s) => s.isActive !== false)
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+        // Fallback to hard-coded sections if none are returned from backend
+        if (rawSections.length === 0) {
+          const fb = fallbackSectionsByCampaign[campaignId] ?? [];
+          const numToId = new Map<number, string>();
+          const textByNum = new Map<number, string>();
+          const titleByNum = new Map<number, string>();
+          const orderedNums: number[] = [];
+          const sectionObjs: QuizSection[] = fb.map((s) => {
+            numToId.set(s.number, s.id);
+            textByNum.set(s.number, s.text);
+            titleByNum.set(s.number, s.title);
+            orderedNums.push(s.number);
+            return {
+              number: s.number,
+              id: s.id,
+              title: s.title,
+              text: s.text,
+              questions: s.questions.map((q) => ({
+                id: q.id,
+                text: q.text,
+                section: q.section,
+                xpValue: q.xpValue ?? 10,
+                correctAnswer: q.correctAnswer,
+              })),
+            };
+          });
+
+          if (!cancelled) {
+            setSectionIdByNumber(numToId);
+            setSectionTextByNumber(textByNum);
+            setSectionTitleByNumber(titleByNum);
+            setOrderedSectionNumbers(orderedNums);
+            setSections(sectionObjs);
+          }
+          return;
+        }
 
         const numToId = new Map<number, string>();
         const idToNumber = new Map<string, number>();
