@@ -1,6 +1,10 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import UserProfileContext from '../context/UserProfileContext';
@@ -8,6 +12,14 @@ import { listCampaigns } from '../services/campaignService';
 import SectionAccordion from './SectionAccordion';
 import { fallbackCampaigns } from '../utils/fallbackContent';
 import Skeleton from './Skeleton';
+
+const markdownSanitizeSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    '*': [...(defaultSchema.attributes?.['*'] ?? []), 'className', 'style'],
+  },
+};
 
 interface CampaignCanvasProps {
   userId: string;
@@ -205,7 +217,15 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
         sectionId={currentSection.id}
         completed={completedSections.includes(currentSection.number)}
       >
-        {sectionText && <p className="current-section-text">{sectionText}</p>}
+        {sectionText && (
+          <ReactMarkdown
+            className="current-section-text markdown"
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw, [rehypeSanitize, markdownSanitizeSchema]]}
+          >
+            {sectionText}
+          </ReactMarkdown>
+        )}
 
         <div className="question-item">
           <p>{current.text}</p>

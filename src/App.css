@@ -321,6 +321,19 @@ main {
   font-style: italic;
 }
 
+.markdown img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown .align-center {
+  text-align: center;
+}
+
+.markdown .align-right {
+  text-align: right;
+}
+
 /* ============================
    Modal (SetDisplayNameModal)
 ============================ */
