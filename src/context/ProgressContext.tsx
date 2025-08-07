@@ -25,14 +25,12 @@ import type { Schema } from '../../amplify/data/resource';
 import { getLevelFromXP } from '../utils/xp';
 import type { HandleAnswer, SubmitArgs } from '../types/QuestionTypes';
 
-type ProgressListener = (state: {
-  xp: number;
-  level: number;
-  streak: number;
-  completedSections: number[];
-  completedCampaigns: string[];
-  answeredQuestions: string[];
-}) => void;
+export type ProgressEvent =
+  | { type: 'section'; xp: number }
+  | { type: 'campaign'; xp: number }
+  | { type: 'level'; xp: number; level: number };
+
+type ProgressListener = (event: ProgressEvent) => void;
 
 interface ProgressContextValue {
   xp: number;
@@ -56,6 +54,8 @@ interface ProviderProps {
 }
 
 const XP_PER_LEVEL = 100;
+const XP_FOR_SECTION = 50;
+const XP_FOR_CAMPAIGN = 100;
 type UserProgressModel = Schema['UserProgress']['type'];
 
 function startOfDay(d: Date) {
@@ -136,6 +136,17 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 
   const level = useMemo(() => getLevelFromXP(xp, XP_PER_LEVEL), [xp]);
 
+  const listeners = useRef(new Set<ProgressListener>());
+
+  const emit = useCallback((event: ProgressEvent) => {
+    listeners.current.forEach((fn) => fn(event));
+  }, []);
+
+  const subscribe = useCallback((fn: ProgressListener) => {
+    listeners.current.add(fn);
+    return () => listeners.current.delete(fn);
+  }, []);
+
   const awardXP = useCallback(
     (amount: number) => {
       const now = new Date();
@@ -158,6 +169,11 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 
       setXP((prev) => {
         const newXP = prev + amount;
+        const prevLevel = getLevelFromXP(prev, XP_PER_LEVEL);
+        const newLevel = getLevelFromXP(newXP, XP_PER_LEVEL);
+        if (newLevel > prevLevel) {
+          emit({ type: 'level', level: newLevel, xp: amount });
+        }
         if (progressId) {
           updateUserProgress({
             id: progressId,
@@ -169,13 +185,15 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         return newXP;
       });
     },
-    [progressId, lastBlazeAt, streak]
+    [progressId, lastBlazeAt, streak, emit]
   );
 
   const markSectionComplete = useCallback(
     async (section: number, sectionId?: string) => {
+      let newlyCompleted = false;
       setCompletedSections((prev) => {
         if (prev.includes(section)) return prev;
+        newlyCompleted = true;
         const updated = [...prev, section];
         if (progressId) {
           updateUserProgress({
@@ -185,6 +203,11 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         }
         return updated;
       });
+
+      if (newlyCompleted) {
+        emit({ type: 'section', xp: XP_FOR_SECTION });
+        awardXP(XP_FOR_SECTION);
+      }
 
       if (sectionId) {
         try {
@@ -213,7 +236,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         }
       }
     },
-    [progressId, userId]
+    [progressId, userId, emit, awardXP]
   );
 
   const markQuestionAnswered = useCallback(
@@ -307,9 +330,18 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 
   const markCampaignComplete = useCallback(
     async (campaignId: string) => {
-      setCompletedCampaigns((prev) =>
-        prev.includes(campaignId) ? prev : [...prev, campaignId]
-      );
+      let newlyCompleted = false;
+      setCompletedCampaigns((prev) => {
+        if (prev.includes(campaignId)) return prev;
+        newlyCompleted = true;
+        return [...prev, campaignId];
+      });
+
+      if (newlyCompleted) {
+        emit({ type: 'campaign', xp: XP_FOR_CAMPAIGN });
+        awardXP(XP_FOR_CAMPAIGN);
+      }
+
       try {
         const res = await listCampaignProgress({
           filter: {
@@ -333,27 +365,8 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
         window.dispatchEvent(new Event('campaignProgressChanged'));
       }
     },
-    [userId]
+    [userId, emit, awardXP]
   );
-
-  const listeners = useRef(new Set<ProgressListener>());
-
-  const subscribe = useCallback((fn: ProgressListener) => {
-    listeners.current.add(fn);
-    return () => listeners.current.delete(fn);
-  }, []);
-
-  useEffect(() => {
-    const snapshot = {
-      xp,
-      level,
-      streak,
-      completedSections,
-      completedCampaigns,
-      answeredQuestions,
-    };
-    listeners.current.forEach((fn) => fn(snapshot));
-  }, [xp, level, streak, completedSections, completedCampaigns, answeredQuestions]);
 
   const value: ProgressContextValue = {
     xp,
