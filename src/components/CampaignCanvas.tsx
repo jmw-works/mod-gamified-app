@@ -35,6 +35,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const { profile } = useUserProfile();
 
   const [index, setIndex] = useState(0);
+  const [response, setResponse] = useState('');
   const [infoText, setInfoText] = useState<string | null>(null);
 
   // Reset index when campaign or questions change
@@ -80,20 +81,20 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     ? sectionTextByNumber.get(current.section)
     : undefined;
 
-  const onAnswer = async (answerId: string) => {
+  const onSubmit = async () => {
     if (authStatus !== 'authenticated' || !userId) {
       onRequireAuth?.();
       return;
     }
 
-    const ans = current.answers.find((a) => a.id === answerId);
-    const isCorrect = !!ans?.isCorrect;
+    const isCorrect =
+      response.trim().toLowerCase() === current.correctAnswer?.trim().toLowerCase();
 
     await handleAnswer({
       questionId: current.id,
+      responseText: response,
       isCorrect,
       xp: current.xpValue ?? undefined,
-      responseText: ans?.content,
       sectionId: sectionIdByNumber.get(current.section),
     });
 
@@ -118,6 +119,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       }
     }
 
+    setResponse('');
     setIndex((prev) => prev + 1);
   };
 
@@ -129,15 +131,17 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
 
       <div className="question-item">
         <p>{current.text}</p>
-        {current.answers.map((a) => (
-          <button key={a.id} onClick={() => onAnswer(a.id)}>
-            {a.content}
-          </button>
-        ))}
+        <input
+          type="text"
+          value={response}
+          onChange={(e) => setResponse(e.target.value)}
+        />
+        <button onClick={onSubmit}>Submit</button>
       </div>
     </div>
   );
 }
+
 
 
 
