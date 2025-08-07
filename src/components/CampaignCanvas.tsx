@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useProgress } from '../context/ProgressContext';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
+import { useUserProfile } from '../context/UserProfileContext';
 
 interface CampaignCanvasProps {
   userId: string;
@@ -17,6 +18,7 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
   } = useCampaignQuizData(userId, campaignId);
 
   const { awardXP, markSectionComplete, markCampaignComplete } = useProgress();
+  const { profile } = useUserProfile();
 
   const [index, setIndex] = useState(0);
 
@@ -27,7 +29,8 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
 
   if (!campaignId) return <div>Select a campaign to begin.</div>;
   if (!questions.length) return <div>No questions found for this campaign.</div>;
-  if (index >= questions.length) return <div>Campaign complete!</div>;
+  if (index >= questions.length)
+    return <div>Campaign complete, {profile?.displayName ?? 'Friend'}!</div>;
 
   const current = questions[index];
   const sectionText = current.section ? sectionTextByNumber.get(current.section) : undefined;
@@ -36,7 +39,7 @@ export default function CampaignCanvas({ userId }: CampaignCanvasProps) {
     const ans = current.answers.find((a) => a.id === answerId);
     const isCorrect = !!ans?.isCorrect;
 
-    await handleAnswer({ questionId: current.id, isCorrect, xp: current.xpValue });
+    await handleAnswer({ questionId: current.id, isCorrect, xp: current.xpValue ?? undefined });
 
     if (isCorrect) {
       const alreadyAnswered = progress?.answeredQuestions.includes(current.id);
