@@ -1,5 +1,5 @@
-import { useContext, useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
@@ -87,22 +87,48 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     if (!isGuest) setShowSignupPrompt(false);
   }, [isGuest]);
 
+  const sectionsWithQuestions = sections.filter((s) => s.questions.length > 0);
+  const currentSection =
+    expandedIndex === null ? null : sectionsWithQuestions[expandedIndex];
+  const current = currentSection?.questions[questionIndex];
+  const sectionTitle = currentSection?.title;
+  const sectionText = currentSection?.text;
+
+  const answerMask = useMemo(() => {
+    const correct = current?.correctAnswer ?? '';
+    let masked = '';
+    for (let i = 0; i < correct.length; i++) {
+      const answerChar = correct[i];
+      const userChar = response[i];
+      if (answerChar === ' ') {
+        masked += '  ';
+      } else {
+        masked += userChar && userChar !== ' ' ? userChar : '_';
+        if (i < correct.length - 1 && correct[i + 1] !== ' ') {
+          masked += ' ';
+        }
+      }
+    }
+    return masked;
+  }, [current?.correctAnswer, response]);
+
   if (!campaignId) return <div>Select a campaign to begin.</div>;
   if (loading) return <Skeleton height="200px" />;
   if (error) return <div>Error loading campaign: {error.message}</div>;
-  const sectionsWithQuestions = sections.filter((s) => s.questions.length > 0);
   if (!sectionsWithQuestions.length)
     return <div>No questions found for this campaign.</div>;
   if (expandedIndex !== null && expandedIndex >= sectionsWithQuestions.length)
     return <div>Campaign complete, {profile?.displayName ?? 'Friend'}!</div>;
-
   if (expandedIndex === null)
     return <div>Select a section to begin.</div>;
+  if (!currentSection || !current)
+    return <div>Question unavailable.</div>;
 
-  const currentSection = sectionsWithQuestions[expandedIndex];
-  const current = currentSection.questions[questionIndex];
-  const sectionTitle = currentSection.title;
-  const sectionText = currentSection.text;
+  const handleResponseChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    const max = current.correctAnswer?.length;
+    setResponse(max ? val.slice(0, max) : val);
+  };
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -188,10 +214,16 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
         <div className="question-item">
           <p>{current.text}</p>
           <form onSubmit={onSubmit}>
-            <textarea
-              value={response}
-              onChange={(e) => setResponse(e.target.value)}
-            />
+            <div className="answer-mask">
+              <input
+                type="text"
+                value={response}
+                onChange={handleResponseChange}
+                maxLength={current.correctAnswer?.length}
+                spellCheck={false}
+              />
+              <div className="mask">{answerMask}</div>
+            </div>
             <button
               type="submit"
               className={`submit-btn ${answerState}`}
