@@ -1,25 +1,23 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import {
-  useAuthenticator,
-  Heading,
-  Text,
-  useTheme,
-} from '@aws-amplify/ui-react';
+import { useAuthenticator, Text } from '@aws-amplify/ui-react';
 import { fetchUserAttributes } from 'aws-amplify/auth';
 
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
 
 import { Header } from '../components/Header';
-import QuizSection from '../components/QuizSection';
+import CampaignCanvas from '../components/CampaignCanvas';
 import LevelUpBanner from '../components/LevelUpBanner';
 import UserStatsPanel from '../components/UserStatsPanel';
 import { SetDisplayNameModal } from '../components/SetDisplayNameModal';
 
 import { useUserProfile } from '../hooks/useUserProfile';
-import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
+import { ActiveCampaignContext } from '../hooks/useActiveCampaign';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { calculateXPProgress } from '../utils/xp';
+import type { Progress } from '../types/ProgressTypes';
+import { createEmptyProgress } from '../types/ProgressTypes';
+import type { DBCampaign } from '../types/AppContentTypes';
 
 const THUMBNAIL_BASE_URL =
   'https://amplify-dg9xethdak0e7-mai-amplifydataamplifycodege-5wzlzqzwsqsa.s3.us-west-1.amazonaws.com/public/thumbnails';
@@ -32,12 +30,19 @@ export default function AuthenticatedContent() {
     ctx.authStatus,
   ]);
   const userId = user?.userId ?? '';
-  const { tokens } = useTheme();
 
   const [attrs, setAttrs] = useState<Record<string, string> | null>(null);
   const [attrsError, setAttrsError] = useState<Error | null>(null);
 
-  const [campaigns, setCampaigns] = useState<any[]>([]);
+  type CampaignItem = {
+    id: string;
+    title: string;
+    description: string;
+    thumbnailFile: string;
+    isLocked: boolean;
+  };
+
+  const [campaigns, setCampaigns] = useState<CampaignItem[]>([]);
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
@@ -46,15 +51,7 @@ export default function AuthenticatedContent() {
   const headerHeight = useHeaderHeight(headerRef);
   const spacing = 50;
 
-  const {
-    questions,
-    progress,
-    loading: quizLoading,
-    error: quizError,
-    handleAnswer,
-    orderedSectionNumbers,
-    } = useCampaignQuizData(userId, activeCampaignId);
-  const { sectionTextByNumber } = useCampaignQuizData(userId, activeCampaignId);
+  const [progress, setProgress] = useState<Progress>(() => createEmptyProgress(userId));
 
 
   const emailFromAttrs: string | null = attrs?.email ?? null;
@@ -88,7 +85,7 @@ export default function AuthenticatedContent() {
 
         if (errors) console.error('Campaign list errors:', errors);
 
-        const parsed = (data ?? []).map((c) => ({
+        const parsed: CampaignItem[] = ((data ?? []) as DBCampaign[]).map((c) => ({
           id: c.id,
           title: c.title,
           description: c.description ?? '',
@@ -134,40 +131,18 @@ export default function AuthenticatedContent() {
     setShowNameModal(false);
   }
 
-  const safeProgress = useMemo(() => {
-    if (progress) return progress;
-    return {
-      id: 'temp',
-      userId: userId || 'unknown',
-      totalXP: 0,
-      answeredQuestions: [],
-      completedSections: [],
-      dailyStreak: 0,
-      lastBlazeAt: null,
-    };
-  }, [progress, userId]);
-
-  const currentXP = safeProgress.totalXP;
+  const currentXP = progress.totalXP;
   const maxXP = 100;
   const percentage = calculateXPProgress(currentXP, maxXP);
-  const bountiesCompleted = safeProgress.completedSections?.length ?? 0;
-  const streak = safeProgress.dailyStreak ?? 0;
+  const bountiesCompleted = progress.completedSections.length;
+  const streak = progress.dailyStreak;
 
-  const mergedError = profileError ?? quizError ?? attrsError ?? null;
+  const mergedError = profileError ?? attrsError ?? null;
 
   const onSelectCampaign = useCallback((id: string, locked?: boolean) => {
     if (locked) return;
     setActiveCampaignId(id);
   }, []);
-
-  const groupedBySection = useMemo(() => {
-    const map = new Map<number, ReturnType<typeof questions.filter>>();
-    for (const q of questions) {
-      const list = map.get(q.section) ?? [];
-      map.set(q.section, [...list, q]);
-    }
-    return map;
-  }, [questions]);
 
   if (authStatus !== 'authenticated') return null;
 
@@ -199,10 +174,11 @@ export default function AuthenticatedContent() {
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24, padding: `0 ${spacing}px` }}>
-          {!activeCampaignId && (
-            <div style={{ width: 260, display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {campaigns.length > 0 ? (
+        <ActiveCampaignContext.Provider value={{ activeCampaignId, setActiveCampaignId }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24, padding: `0 ${spacing}px` }}>
+            {!activeCampaignId && (
+              <div style={{ width: 260, display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {campaigns.length > 0 ? (
   campaigns.map((campaign) => {
     const imgUrl = campaign.thumbnailFile
       ? `${THUMBNAIL_BASE_URL}/${campaign.thumbnailFile}`
@@ -262,63 +238,26 @@ export default function AuthenticatedContent() {
   ))
 )}
 
+              </div>
+            )}
+
+            <div style={{ flex: 2 }}>
+              <CampaignCanvas userId={userId} displayName={displayName} onProgress={setProgress} />
             </div>
-          )}
 
-          <div style={{ flex: 2 }}>
-  <div style={{ marginBottom: 16, textAlign: 'center' }}>
-    <Heading level={2}>Hey {displayName}! Let&apos;s jump in.</Heading>
-    <Text fontSize="1rem" style={{ marginTop: 8, color: '#444' }}>
-      Discover a world of learning and adventure as you hone your treasure hunting skills.
-    </Text>
-    <img
-      src="/adventure_is_out_there.png"
-      alt="Adventure is out there"
-      style={{
-        marginTop: 24,
-        width: '85%', // 15% smaller than full width
-        maxWidth: 600,
-        height: 'auto',
-      }}
-    />
-  </div>
-
-
-
-            {activeCampaignId &&
-              orderedSectionNumbers.map((sectionNum, idx) => {
-                const questionsInSection = groupedBySection.get(sectionNum) ?? [];
-                const isLocked = safeProgress.completedSections.includes(sectionNum) === false &&
-                                 sectionNum !== orderedSectionNumbers[0] &&
-                                 !safeProgress.completedSections.includes(orderedSectionNumbers[idx - 1]);
-
-                return (
-                  <QuizSection
-                    key={`sec-${sectionNum}`}
-                    title={`Section ${sectionNum}`}
-                    educationalText={sectionTextByNumber.get(sectionNum) ?? ''}
-                    questions={questionsInSection}
-                    progress={safeProgress}
-                    handleAnswer={handleAnswer}
-                    isLocked={isLocked}
-                    initialOpen={idx === 0}
-                  />
-                );
-              })}
+            <UserStatsPanel
+              user={{
+                username: user?.username,
+                attributes: { name: displayName, email: emailFromAttrs ?? undefined },
+              }}
+              currentXP={currentXP}
+              maxXP={maxXP}
+              percentage={percentage}
+              headerHeight={headerHeight}
+              spacing={spacing}
+            />
           </div>
-
-          <UserStatsPanel
-            user={{
-              username: user?.username,
-              attributes: { name: displayName, email: emailFromAttrs ?? undefined },
-            }}
-            currentXP={currentXP}
-            maxXP={maxXP}
-            percentage={percentage}
-            headerHeight={headerHeight}
-            spacing={spacing}
-          />
-        </div>
+        </ActiveCampaignContext.Provider>
 
         {showNameModal && (
           <SetDisplayNameModal loading={profileLoading} onSubmit={handleSaveDisplayName} />
