@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Question as QuestionUI } from '../types/QuestionTypes';
 import { listSections } from '../services/sectionService';
 import { listQuestions } from '../services/questionService';
-import { fallbackSectionsByCampaign } from '../utils/fallbackContent';
+import { ensureSeedData } from '../utils/seedData';
 
 export interface QuizSection {
   number: number;
@@ -36,6 +36,8 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
       setLoading(true);
       setErr(null);
       try {
+        await ensureSeedData();
+
         const sRes = await listSections({
           filter: { campaignId: { eq: campaignId } },
           selectionSet: ['id', 'number', 'order', 'educationalText', 'title', 'isActive'],
@@ -45,39 +47,13 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
           .filter((s) => s.isActive !== false)
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-        // Fallback to hard-coded sections if none are returned from backend
         if (rawSections.length === 0) {
-          const fb = fallbackSectionsByCampaign[campaignId] ?? [];
-          const numToId = new Map<number, string>();
-          const textByNum = new Map<number, string>();
-          const titleByNum = new Map<number, string>();
-          const orderedNums: number[] = [];
-          const sectionObjs: QuizSection[] = fb.map((s) => {
-            numToId.set(s.number, s.id);
-            textByNum.set(s.number, s.text);
-            titleByNum.set(s.number, s.title);
-            orderedNums.push(s.number);
-            return {
-              number: s.number,
-              id: s.id,
-              title: s.title,
-              text: s.text,
-              questions: s.questions.map((q) => ({
-                id: q.id,
-                text: q.text,
-                section: q.section,
-                xpValue: q.xpValue ?? 10,
-                correctAnswer: q.correctAnswer,
-              })),
-            };
-          });
-
           if (!cancelled) {
-            setSectionIdByNumber(numToId);
-            setSectionTextByNumber(textByNum);
-            setSectionTitleByNumber(titleByNum);
-            setOrderedSectionNumbers(orderedNums);
-            setSections(sectionObjs);
+            setSectionIdByNumber(new Map());
+            setSectionTextByNumber(new Map());
+            setSectionTitleByNumber(new Map());
+            setOrderedSectionNumbers([]);
+            setSections([]);
           }
           return;
         }

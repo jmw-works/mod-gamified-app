@@ -5,7 +5,7 @@ import {
   createCampaignProgress,
   updateCampaignProgress,
 } from '../services/progressService';
-import { fallbackCampaigns } from '../utils/fallbackContent';
+import { ensureSeedData } from '../utils/seedData';
 
 export type UICampaign = {
   id: string;
@@ -29,6 +29,9 @@ export function useCampaigns(userId?: string | null) {
     setLoading(true);
     setErr(null);
     try {
+      // Ensure placeholder data exists for development/testing
+      await ensureSeedData();
+
       // 1) fetch all active campaigns
       const cRes = await listCampaigns({
         filter: { isActive: { eq: true } },
@@ -36,26 +39,8 @@ export function useCampaigns(userId?: string | null) {
       });
 
       const raw = (cRes.data ?? [])
-        .filter(c => c.isActive !== false)
+        .filter((c) => c.isActive !== false)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-      // Provide hard-coded fallback campaigns when none exist yet
-      if (raw.length === 0) {
-        const fallback = fallbackCampaigns.map((c, i) => ({
-          id: c.id,
-          title: c.title,
-          description: c.description ?? null,
-          thumbnailUrl: null,
-          infoText: c.infoText ?? null,
-          order: c.order ?? i,
-          isActive: true,
-          locked: i !== 0,
-          completed: false,
-          icon: c.icon ?? null,
-        }));
-        setCampaigns(fallback);
-        return;
-      }
 
       // 2) fetch user campaign progress
       const completedIds = new Set<string>();

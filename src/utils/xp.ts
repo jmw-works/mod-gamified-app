@@ -1,10 +1,13 @@
-// XP scaling per level. Caps out at level 160.
-// Uses a polynomial curve to keep early levels quick while
-// making later levels progressively harder.
+// XP required to advance from the given level to the next.
+// Uses a tiered curve so early levels feel quick and later levels
+// require more effort. Caps out at level 160.
 export function xpForLevel(level: number): number {
   if (level >= 160) return Infinity;
-  // base requirement plus quadratic growth
-  return Math.floor(100 + 10 * Math.pow(level, 2));
+
+  if (level <= 40) return 125;
+  if (level <= 80) return 175;
+  if (level <= 120) return 225;
+  return 265; // levels 121-159
 }
 
 export function calculateXPProgress(currentXP: number, maxXP: number): number {
