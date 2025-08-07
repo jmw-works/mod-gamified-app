@@ -70,11 +70,14 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
   // Per-level math
   const requiredXP = xpForLevel(level);
   const progressWithinLevel = getXPWithinLevel(safeXP);
-  const levelPercent = calculateXPProgress(
-    progressWithinLevel,
-    Number.isFinite(requiredXP) ? requiredXP : 1,
-  );
-  const nextLevelIn = getXPToNextLevel(safeXP);
+  const levelPercent =
+    level >= 160
+      ? 100
+      : calculateXPProgress(
+          progressWithinLevel,
+          Number.isFinite(requiredXP) ? requiredXP : 1,
+        );
+  const nextLevelIn = level >= 160 ? 0 : getXPToNextLevel(safeXP);
 
   const rank = getRankForLevel(level);
 
@@ -121,10 +124,16 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
         </Text>
       </Flex>
 
-      <XPBar percent={levelPercent} label={`Progress to Level ${level + 1}`} fillColor="#e7bb73" />
+      <XPBar
+        percent={levelPercent}
+        label={level >= 160 ? 'Max Level' : `Progress to Level ${level + 1}`}
+        fillColor="#e7bb73"
+      />
 
       <Text marginTop="xs" color={tokens.colors.font.secondary} fontSize="0.9rem">
-        {nextLevelIn === 0
+        {level >= 160
+          ? 'Maximum level achieved — congrats!'
+          : nextLevelIn === 0
           ? 'Level up ready — keep going!'
           : `Only ${nextLevelIn} XP to reach Level ${level + 1}`}
       </Text>

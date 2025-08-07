@@ -44,15 +44,18 @@ export default function AnnouncementBanner({ onLevelUp, onDismiss }: Announcemen
     } else if (xp > prevXP.current) {
       const currentXP = getXPWithinLevel(xp);
       const required = xpForLevel(level);
-      const pct = Math.round(
-        calculateXPProgress(
-          currentXP,
-          Number.isFinite(required) ? required : 1,
-        ),
-      );
-      newTitle = 'Leveling up!';
-      newDesc = `You’ve earned ${currentXP} XP toward ${required}. Keep going to unlock the next section.`;
-      newIndicator = `${pct}%`;
+      if (!Number.isFinite(required)) {
+        newTitle = 'Max level reached!';
+        newDesc = 'You have hit the level cap.';
+        newIndicator = String(level);
+      } else {
+        const pct = Math.round(
+          calculateXPProgress(currentXP, required),
+        );
+        newTitle = 'Leveling up!';
+        newDesc = `You’ve earned ${currentXP} XP toward ${required}. Keep going to unlock the next section.`;
+        newIndicator = `${pct}%`;
+      }
     }
 
     if (newTitle) {
