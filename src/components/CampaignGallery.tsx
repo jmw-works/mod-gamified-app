@@ -13,6 +13,7 @@ import ProgressContext from '../context/ProgressContext';
 type CampaignCard = UICampaign & {
   thumbnailKey?: string | null;
   thumbnailAlt?: string | null;
+  icon?: string | null;
 };
 
 function CampaignCardView({
@@ -46,7 +47,7 @@ function CampaignCardView({
         />
       ) : (
         <div className={`${styles.thumb} ${styles.thumbPlaceholder}`}>
-          No image
+          {c.icon ?? 'No image'}
         </div>
       )}
 

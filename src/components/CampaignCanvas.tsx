@@ -7,6 +7,7 @@ import ProgressContext from '../context/ProgressContext';
 import UserProfileContext from '../context/UserProfileContext';
 import { listCampaigns } from '../services/campaignService';
 import SectionAccordion from './SectionAccordion';
+import { fallbackCampaigns } from '../utils/fallbackContent';
 
 interface CampaignCanvasProps {
   userId: string;
@@ -56,14 +57,15 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
         if (!cancelled) setInfoText(null);
         return;
       }
+      const fb = fallbackCampaigns.find((c) => c.id === campaignId)?.infoText ?? null;
       try {
         const res = await listCampaigns({
           filter: { id: { eq: campaignId } },
           selectionSet: ['id', 'infoText'],
         });
-        if (!cancelled) setInfoText(res.data?.[0]?.infoText ?? null);
+        if (!cancelled) setInfoText(res.data?.[0]?.infoText ?? fb);
       } catch {
-        if (!cancelled) setInfoText(null);
+        if (!cancelled) setInfoText(fb);
       }
     }
     loadInfo();
