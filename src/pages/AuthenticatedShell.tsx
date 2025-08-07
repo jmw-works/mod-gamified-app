@@ -11,7 +11,6 @@ import Skeleton from '../components/Skeleton';
 const CampaignGallery = lazy(() => import('../components/CampaignGallery'));
 const CampaignCanvas = lazy(() => import('../components/CampaignCanvas'));
 
-import { useUserProfile } from '../context/UserProfileContext';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { ProgressProvider } from '../context/ProgressContext';
 import { ActiveCampaignProvider } from '../context/ActiveCampaignContext';
@@ -71,46 +70,12 @@ export default function AuthenticatedShell() {
             </div>
 
             <div className="auth-stats">
-              <UserStatsPanelWithProfile
-                username={user?.username}
-                email={emailFromAttrs ?? undefined}
-                headerHeight={headerHeight}
-                spacing={spacing}
-              />
+              <UserStatsPanel headerHeight={headerHeight} spacing={spacing} />
             </div>
           </div>
         </ProgressProvider>
       </ActiveCampaignProvider>
     </UserProfileProvider>
-  );
-}
-
-// Helper component to use profile inside stats panel
-function UserStatsPanelWithProfile({
-  username,
-  email,
-  headerHeight,
-  spacing,
-}: {
-  username?: string;
-  email?: string;
-  headerHeight: number;
-  spacing: number;
-}) {
-  const { profile } = useUserProfile();
-
-  return (
-    <UserStatsPanel
-      user={{
-        username,
-        attributes: {
-          name: profile?.displayName ?? '',
-          email,
-        },
-      }}
-      headerHeight={headerHeight}
-      spacing={spacing}
-    />
   );
 }
 

@@ -1,21 +1,21 @@
 import { ServiceError } from './serviceError';
 import { client } from './client';
 
-type CampaignListOptions = Parameters<typeof client.models.Campaign.list>[0];
-type CampaignSelectionSet = NonNullable<CampaignListOptions['selectionSet']>;
+type CampaignListOptions = Parameters<typeof client.models.Campaign.list>[0] & {
+  selectionSet?: string[];
+};
+type CampaignSelectionSet = string[];
 
 function withInfoTextSelection(
-  options: CampaignListOptions,
+  options: CampaignListOptions = {},
 ): CampaignListOptions {
   const baseSelection = (options.selectionSet ?? []) as CampaignSelectionSet;
-  const selection = Array.from(
-    new Set([...baseSelection, 'infoText']),
-  ) as CampaignSelectionSet;
+  const selection = Array.from(new Set([...baseSelection, 'infoText'])) as CampaignSelectionSet;
 
   return {
     ...options,
     selectionSet: selection,
-  };
+  } as CampaignListOptions;
 }
 
 export async function listCampaigns(

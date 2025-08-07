@@ -36,10 +36,13 @@ export default function SectionAccordion({
         const props = child.props as { handleAnswer?: HandleAnswer };
         if (props.handleAnswer) {
           const original = props.handleAnswer;
-          return cloneElement(child, {
-            handleAnswer: (args: SubmitArgs) =>
-              original({ ...args, sectionId }),
-          });
+          return cloneElement(
+            child as React.ReactElement<{ handleAnswer?: HandleAnswer }>,
+            {
+              handleAnswer: (args: SubmitArgs) =>
+                original({ ...args, sectionId }),
+            },
+          );
         }
         return child;
       })

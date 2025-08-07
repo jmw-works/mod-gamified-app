@@ -2,6 +2,7 @@
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import { Button, Text } from '@aws-amplify/ui-react';
 import { useProgress } from '../context/ProgressContext';
+import { xpForLevel, getXPWithinLevel } from '../utils/xp';
 import styles from './Header.module.css';
 
 export interface HeaderProps {
@@ -62,8 +63,9 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
   ) => {
     // Daily streak now comes directly from ProgressContext (updated via awardXP)
     const { xp, level, streak, completedSections } = useProgress();
-    const maxXP = level * 100;
-    const xpSub = `${xp}/${maxXP} XP`;
+    const maxXP = xpForLevel(level);
+    const xpWithin = getXPWithinLevel(xp);
+    const xpSub = `${xpWithin}/${maxXP} XP`;
     const bountiesCompleted = completedSections.length;
 
     const [levelAnim, setLevelAnim] = useState(false);

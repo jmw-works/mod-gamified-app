@@ -13,7 +13,7 @@
     "types": ["node"],
     "verbatimModuleSyntax": true
   },
-  "include": ["vite.config.ts", "scripts/**/*.ts"]
+  "include": ["vite.config.ts", "scripts/**/*.ts", "amplify/**/*.ts"]
 }
 
 
