@@ -24,9 +24,11 @@ export default function AuthenticatedShell() {
   useEffect(() => {
     let mounted = true;
     if (authStatus !== 'authenticated') return;
+
     fetchUserAttributes()
       .then((a) => mounted && setAttrs((a ?? {}) as Record<string, string>))
       .catch(() => mounted && setAttrs(null));
+
     return () => {
       mounted = false;
     };
@@ -34,7 +36,6 @@ export default function AuthenticatedShell() {
 
   const emailFromAttrs = attrs?.email ?? null;
   const { profile } = useUserProfile(userId, emailFromAttrs);
-
   const { campaigns, loading: campaignsLoading } = useCampaigns(userId);
 
   const headerRef = useRef<HTMLDivElement>(null);
@@ -55,37 +56,41 @@ export default function AuthenticatedShell() {
 
   return (
     <ActiveCampaignProvider>
-      <ProgressProvider initialXP={profile?.experience ?? 0}>
+      <ProgressProvider userId={userId}>
         <div style={gridStyle}>
-        <div style={{ gridArea: 'header' }}>
-          <HeaderBar ref={headerRef} signOut={signOut} />
-        </div>
+          <div style={{ gridArea: 'header' }}>
+            <HeaderBar ref={headerRef} signOut={signOut} />
+          </div>
 
-        <div style={{ gridArea: 'banner' }}>
-          <AnnouncementBanner />
-        </div>
+          <div style={{ gridArea: 'banner' }}>
+            <AnnouncementBanner />
+          </div>
 
-        <div style={{ gridArea: 'gallery' }}>
-          <CampaignGallery campaigns={campaigns} loading={campaignsLoading} />
-        </div>
+          <div style={{ gridArea: 'gallery' }}>
+            <CampaignGallery campaigns={campaigns} loading={campaignsLoading} />
+          </div>
 
-        <div style={{ gridArea: 'canvas' }}>
-          <CampaignCanvas userId={userId} />
-        </div>
+          <div style={{ gridArea: 'canvas' }}>
+            <CampaignCanvas userId={userId} displayName={profile?.displayName ?? 'Friend'} />
+          </div>
 
-        <div style={{ gridArea: 'stats' }}>
-          <UserStatsPanel
-            user={{
-              username: user?.username,
-              attributes: { name: profile?.displayName ?? '', email: emailFromAttrs ?? undefined },
-            }}
-            headerHeight={headerHeight}
-            spacing={spacing}
-          />
-        </div>
+          <div style={{ gridArea: 'stats' }}>
+            <UserStatsPanel
+              user={{
+                username: user?.username,
+                attributes: {
+                  name: profile?.displayName ?? '',
+                  email: emailFromAttrs ?? undefined,
+                },
+              }}
+              headerHeight={headerHeight}
+              spacing={spacing}
+            />
+          </div>
         </div>
       </ProgressProvider>
     </ActiveCampaignProvider>
   );
 }
+
 
