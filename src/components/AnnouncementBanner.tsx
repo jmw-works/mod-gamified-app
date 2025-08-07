@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Card, Button, Heading, Text } from '@aws-amplify/ui-react';
-import { useProgress, type ProgressEvent } from '../context/ProgressContext';
+import { useProgress } from '../context/ProgressContext';
+import type { ProgressEvent } from '../types/ProgressTypes';
 import styles from './AnnouncementBanner.module.css';
 
 type AnnouncementBannerProps = {

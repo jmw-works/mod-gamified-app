@@ -25,30 +25,13 @@ import type { Schema } from '../../amplify/data/resource';
 import { getLevelFromXP } from '../utils/xp';
 import type { HandleAnswer, SubmitArgs } from '../types/QuestionTypes';
 import { listTitles } from '../services/titleService';
+import type {
+  Progress,
+  ProgressEvent,
+  ProgressEventListener,
+} from '../types/ProgressTypes';
 
-export type ProgressEvent =
-  | { type: 'section'; xp: number }
-  | { type: 'campaign'; xp: number }
-  | { type: 'level'; xp: number; level: number };
-
-type ProgressEventListener = (event: ProgressEvent) => void;
-
-interface ProgressContextValue {
-  xp: number;
-  level: number;
-  streak: number;
-  completedSections: number[];
-  completedCampaigns: string[];
-  answeredQuestions: string[];
-  title: string;
-  awardXP: (amount: number) => void;
-  markSectionComplete: (section: number, sectionId?: string) => Promise<void>;
-  markCampaignComplete: (campaignId: string) => Promise<void>;
-  handleAnswer: HandleAnswer;
-  subscribe: (listener: ProgressEventListener) => () => void;
-}
-
-const ProgressContext = createContext<ProgressContextValue | undefined>(undefined);
+const ProgressContext = createContext<Progress | undefined>(undefined);
 
 interface ProviderProps {
   userId: string;
@@ -485,7 +468,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     }
   }, [userId, completedCampaigns, emit, awardXP]);
 
-  const value: ProgressContextValue = {
+  const value: Progress = {
     xp,
     level,
     streak,
@@ -667,7 +650,7 @@ export function GuestProgressProvider({ children }: { children: ReactNode }) {
     return current?.name ?? '';
   }, [titles, level]);
 
-  const value: ProgressContextValue = {
+  const value: Progress = {
     xp,
     level,
     streak,

@@ -25,3 +25,9 @@ export interface HandleAnswer {
   (args: SubmitArgs): void | Promise<void>;
 }
 
+// Extended question model with optional user answer state
+export interface QuestionWithAnswers extends Question {
+  userAnswer?: string;
+  isCorrect?: boolean;
+}
+

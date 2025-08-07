@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
-import type { Question as QuestionUI } from '../types/QuestionTypes';
+import { useContext, useEffect, useState } from 'react';
+import type { Question as QuestionUI, HandleAnswer } from '../types/QuestionTypes';
 import { listSections } from '../services/sectionService';
 import { listQuestions } from '../services/questionService';
 import { ensureSeedData } from '../utils/seedData';
+import ProgressContext from '../context/ProgressContext';
+import type { Progress } from '../types/ProgressTypes';
 
 export interface QuizSection {
   number: number;
@@ -28,6 +30,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
   const [sectionTitleByNumber, setSectionTitleByNumber] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<Error | null>(null);
+  const progress = useContext(ProgressContext);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,8 +174,14 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
     };
   }, [activeCampaignId]);
 
+  const questions: QuestionUI[] = sections.flatMap((s) => s.questions);
+  const handleAnswer: HandleAnswer | undefined = progress?.handleAnswer;
+
   return {
     sections,
+    questions,
+    progress: progress as Progress | undefined,
+    handleAnswer,
     loading,
     error,
     orderedSectionNumbers,
