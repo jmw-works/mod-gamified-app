@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Heading, Text } from '@aws-amplify/ui-react';
 
 import SectionAccordion from './SectionAccordion';
@@ -13,7 +13,7 @@ interface Props {
   onRequireAuth?: () => void;
 }
 
-export default function CampaignCanvas({ displayName, onProgress }: Props) {
+export default function CampaignCanvas({ displayName, onProgress, onRequireAuth }: Props) {
   const { activeCampaignId } = useActiveCampaign();
 
   const {
@@ -73,6 +73,27 @@ export default function CampaignCanvas({ displayName, onProgress }: Props) {
   ]);
 
   const safeProgress = progress ?? createEmptyProgress();
+
+  // After the first section of the first campaign is completed, prompt auth.
+  const promptedAuth = useRef(false);
+  useEffect(() => {
+    if (
+      promptedAuth.current ||
+      !onRequireAuth ||
+      activeCampaignId !== 'campaign-1'
+    )
+      return;
+    const firstSection = orderedSectionNumbers[0];
+    if (firstSection && safeProgress.completedSections.includes(firstSection)) {
+      promptedAuth.current = true;
+      onRequireAuth();
+    }
+  }, [
+    safeProgress.completedSections,
+    orderedSectionNumbers,
+    activeCampaignId,
+    onRequireAuth,
+  ]);
 
   if (!activeCampaignId) {
     return (

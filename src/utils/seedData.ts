@@ -4,7 +4,7 @@ import {
 } from '../services/campaignService';
 import { listSections, createSection } from '../services/sectionService';
 import { listQuestions, createQuestion } from '../services/questionService';
-import { getCurrentUser } from 'aws-amplify/auth';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 // Deterministically generate campaign/section/question structure so that
 // development environments can auto-populate placeholder content.
@@ -15,9 +15,11 @@ let seeding: Promise<void> | null = null;
 
 export async function ensureSeedData() {
   try {
-    await getCurrentUser();
+    const session = await fetchAuthSession();
+    const groups = (session.tokens?.accessToken?.payload['cognito:groups'] as string[] | undefined) ?? [];
+    if (!groups.includes('admin')) return; // only admins seed
   } catch {
-    // skip seeding for guests
+    // skip seeding for guests or on auth errors
     return;
   }
   if (!seeding) seeding = seedAll();

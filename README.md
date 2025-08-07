@@ -1,4 +1,16 @@
-# React + TypeScript + Vite
+# Gamified Learning App
+
+This project uses AWS Amplify Gen2 with React and TypeScript to deliver a gamified learning experience.
+
+## Public vs Authenticated Access
+
+- Guests read seeded **Campaign**, **Section**, and **Question** data via the identity pool (`authMode: 'identityPool'`). Only Campaign 1 / Section 1 is unlocked.
+- Completing Section 1 prompts a sign up / sign in flow.
+- Authenticated users read and write with the user pool (`authMode: 'userPool'`).
+- On sign-in, any local guest progress is merged into the user's backend record, de-duplicating by question, section, and campaign to avoid double XP.
+- Seed data is created only after an authenticated admin session or by backend scripts; guests never write seed data.
+
+## Development
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
