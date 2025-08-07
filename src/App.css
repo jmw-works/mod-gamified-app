@@ -26,10 +26,20 @@ body {
   text-align: center;
 }
 
+:root {
+  --header-height: 140px;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --header-height: 100px;
+  }
+}
+
 /* If your authenticated app uses a fixed header, this keeps content from
    sliding underneath it. It doesn't affect the unauthenticated screen. */
 main {
-  padding-top: 160px;
+  padding-top: var(--header-height);
 }
 
 /* ============================
