@@ -4,6 +4,7 @@ import { Button, Text } from '@aws-amplify/ui-react';
 import { useProgress } from '../context/ProgressContext';
 import { xpForLevel, getXPWithinLevel } from '../utils/xp';
 import styles from './Header.module.css';
+import { StatPill } from './StatPill';
 
 export interface HeaderProps {
   signOut?: () => void;
@@ -16,36 +17,6 @@ export interface HeaderProps {
   iconSize?: number;
   /** Controls title font size (rem). Default 1.75. */
   titleSizeRem?: number;
-
-  /** Color for the main label text inside each pill (e.g., "Level 3"). Default #ffffff. */
-  pillLabelColor?: string;
-  /** Color for the sublabel text inside each pill (e.g., "250/1000 XP"). Default #e0e0e0. */
-  pillSubLabelColor?: string;
-}
-
-
-function StatPill({
-  iconSrc,
-  iconAlt,
-  label,
-  sublabel,
-  animate = false,
-}: {
-  iconSrc: string;
-  iconAlt: string;
-  label: string;
-  sublabel?: string;
-  animate?: boolean;
-}) {
-  return (
-    <div className={`${styles.pill} ${animate ? styles.pillPulse : ''}`}>
-      <img src={iconSrc} alt={iconAlt} className={styles.pillIcon} />
-      <div className={styles.pillText}>
-        <Text className={styles.pillLabel}>{label}</Text>
-        {sublabel && <Text className={styles.pillSublabel}>{sublabel}</Text>}
-      </div>
-    </div>
-  );
 }
 
 export const Header = forwardRef<HTMLDivElement, HeaderProps>(
@@ -56,8 +27,6 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
       logoSize = 95,
       iconSize = 75,
       titleSizeRem = 1.75,
-      pillLabelColor = '#ffffff',
-      pillSubLabelColor = '#e0e0e0',
     },
     ref
   ) => {
@@ -65,7 +34,7 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
     const { xp, level, streak, completedSections } = useProgress();
     const maxXP = xpForLevel(level);
     const xpWithin = getXPWithinLevel(xp);
-    const xpSub = `${xpWithin}/${maxXP} XP`;
+    const xpValue = `${xpWithin}/${maxXP} XP`;
     const bountiesCompleted = completedSections.length;
 
     const [levelAnim, setLevelAnim] = useState(false);
@@ -127,16 +96,7 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
       root.style.setProperty('--logo-size', `${logoSize}px`);
       root.style.setProperty('--pill-icon-size', `${iconSize}px`);
       root.style.setProperty('--title-size', `${titleSizeRem}rem`);
-      root.style.setProperty('--pill-label-color', pillLabelColor);
-      root.style.setProperty('--pill-sublabel-color', pillSubLabelColor);
-    }, [
-      height,
-      logoSize,
-      iconSize,
-      titleSizeRem,
-      pillLabelColor,
-      pillSubLabelColor,
-    ]);
+    }, [height, logoSize, iconSize, titleSizeRem]);
 
     return (
       <header ref={ref} className={styles.header}>
@@ -157,23 +117,21 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
         <div className={styles.pills}>
           <StatPill
             iconSrc="/raccoon.png"
-            iconAlt="Experience"
             label={`Level ${level}`}
-            sublabel={xpSub}
+            value={xpValue}
+            ariaLabel={`Level ${level}, ${xpWithin} of ${maxXP} experience points`}
             animate={levelAnim}
           />
           <StatPill
             iconSrc="/totem.png"
-            iconAlt="Bounties completed"
-            label={`${bountiesCompleted} completed`}
-            sublabel="bounties"
+            label={`${bountiesCompleted} bounties`}
+            ariaLabel={`${bountiesCompleted} completed bounties`}
             animate={bountyAnim}
           />
           <StatPill
             iconSrc="/blaze.png"
-            iconAlt="Daily streak"
-            label={`${streak} day blaze`}
-            sublabel="daily streak"
+            label={`${streak}-day streak`}
+            ariaLabel={`${streak}-day streak`}
             animate={streakAnim}
           />
         </div>
