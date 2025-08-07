@@ -1,0 +1,43 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# AWS Amplify (Gen 2 config, sandbox, and local state)
+.amplify/
+amplifyconfiguration*
+amplify_outputs*
+
+# Ignore everything in amplify, except explicitly allowed files
+amplify/**
+!amplify/
+!amplify/storage/
+!amplify/storage/resource.ts
+!amplify/storage/thumbnailfiles
+
+# Sandbox-specific file (ignore only root copy)
+# The copy in /public is tracked for deployment metadata
+/amplify_outputs.json
+!public/amplify_outputs.json
+
