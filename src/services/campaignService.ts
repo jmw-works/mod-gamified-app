@@ -26,6 +26,7 @@ export async function listCampaigns(
       withInfoTextSelection(options),
     );
   } catch (err) {
+    console.error('listCampaigns failed', err);
     throw new ServiceError('Failed to list campaigns', { cause: err });
   }
 }
@@ -36,6 +37,7 @@ export async function createCampaign(
   try {
     return await client.models.Campaign.create(input);
   } catch (err) {
+    console.error('createCampaign failed', err);
     throw new ServiceError('Failed to create campaign', { cause: err });
   }
 }
@@ -46,6 +48,7 @@ export async function updateCampaign(
   try {
     return await client.models.Campaign.update(input);
   } catch (err) {
+    console.error('updateCampaign failed', err);
     throw new ServiceError('Failed to update campaign', { cause: err });
   }
 }

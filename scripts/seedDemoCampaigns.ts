@@ -1,5 +1,12 @@
+import { Amplify } from 'aws-amplify';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../amplify/data/resource';
+import outputs from '../amplify_outputs.json';
+
+// Configure Amplify so this standalone script can talk to the backend.
+// When running outside the browser (e.g. `tsx scripts/seedDemoCampaigns.ts`),
+// the default configuration isn't automatically loaded, so we do it manually.
+Amplify.configure(outputs);
 
 type SeedQuestion = {
   text: string;
@@ -20,6 +27,9 @@ type SeedCampaign = {
 };
 
 const client = generateClient<Schema>();
+// Use IAM auth so the script can run with CLI credentials instead of a
+// Cognito user session.
+const auth = { authMode: 'iam' as const };
 
 function caesarEncode(str: string, shift: number): string {
   return str
@@ -502,17 +512,21 @@ async function seedDemoCampaigns() {
     const existing = await client.models.Campaign.list({
       filter: { slug: { eq: c.slug } },
       selectionSet: ['id'],
+      ...auth,
     });
     if ((existing.data ?? []).length) {
       console.log(`Skipping existing campaign ${c.slug}`);
       continue;
     }
-    const campaignRes = await client.models.Campaign.create({
-      slug: c.slug,
-      title: c.title,
-      description: c.description,
-      order,
-    });
+    const campaignRes = await client.models.Campaign.create(
+      {
+        slug: c.slug,
+        title: c.title,
+        description: c.description,
+        order,
+      },
+      auth,
+    );
     const campaign = campaignRes.data;
     if (!campaign) {
       console.error('Failed to create campaign', c.slug);
@@ -520,13 +534,16 @@ async function seedDemoCampaigns() {
     }
     let sectionNumber = 1;
     for (const s of c.sections) {
-      const sectionRes = await client.models.Section.create({
-        campaignId: campaign.id,
-        number: sectionNumber,
-        title: s.title,
-        educationalText: s.educationalText,
-        order: sectionNumber,
-      });
+      const sectionRes = await client.models.Section.create(
+        {
+          campaignId: campaign.id,
+          number: sectionNumber,
+          title: s.title,
+          educationalText: s.educationalText,
+          order: sectionNumber,
+        },
+        auth,
+      );
       const section = sectionRes.data;
       if (!section) {
         console.error('Failed to create section', s.title);
@@ -534,12 +551,15 @@ async function seedDemoCampaigns() {
       }
       let questionOrder = 1;
       for (const q of s.questions) {
-        await client.models.Question.create({
-          sectionId: section.id,
-          text: q.text,
-          correctAnswer: q.correctAnswer,
-          order: questionOrder,
-        });
+        await client.models.Question.create(
+          {
+            sectionId: section.id,
+            text: q.text,
+            correctAnswer: q.correctAnswer,
+            order: questionOrder,
+          },
+          auth,
+        );
         questionOrder += 1;
       }
       sectionNumber += 1;

@@ -7,6 +7,7 @@ export async function listSections(
   try {
     return await client.models.Section.list(options);
   } catch (err) {
+    console.error('listSections failed', err);
     throw new ServiceError('Failed to list sections', { cause: err });
   }
 }
@@ -17,6 +18,7 @@ export async function createSection(
   try {
     return await client.models.Section.create(input);
   } catch (err) {
+    console.error('createSection failed', err);
     throw new ServiceError('Failed to create section', { cause: err });
   }
 }
@@ -27,6 +29,7 @@ export async function updateSection(
   try {
     return await client.models.Section.update(input);
   } catch (err) {
+    console.error('updateSection failed', err);
     throw new ServiceError('Failed to update section', { cause: err });
   }
 }
