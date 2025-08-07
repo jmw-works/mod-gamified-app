@@ -8,6 +8,8 @@ import { useCampaigns, type UICampaign } from '../hooks/useCampaigns';
 import { useCampaignThumbnail } from '../hooks/useCampaignThumbnail';
 import ProgressContext from '../context/ProgressContext';
 import Skeleton from './Skeleton';
+import ProgressBar from './ProgressBar';
+import { useCampaignProgress } from '../hooks/useCampaignProgress';
 
 
 // Optional thumbnail props for campaigns
@@ -21,10 +23,12 @@ function CampaignCardView({
   c,
   active,
   onClick,
+  progress,
 }: {
   c: CampaignCard;
   active: boolean;
   onClick: () => void;
+  progress?: { completed: number; total: number };
 }) {
   const { url } = useCampaignThumbnail({
     key: c.thumbnailKey ?? undefined,
@@ -63,6 +67,12 @@ function CampaignCardView({
         {c.description ? (
           <p className={styles.cardDescription}>{c.description}</p>
         ) : null}
+        {progress && (
+          <ProgressBar
+            percent={progress.total > 0 ? (progress.completed / progress.total) * 100 : 0}
+            label={`${progress.completed}/${progress.total}`}
+          />
+        )}
       </div>
     </button>
   );
@@ -76,6 +86,7 @@ function CampaignGalleryInner() {
   const progress = useContext(ProgressContext);
   const completedCampaigns = progress?.completedCampaigns;
   const galleryRef = useRef<HTMLDivElement>(null);
+  const { progress: campaignProgress, refresh: refreshCampaignProgress } = useCampaignProgress(userId);
 
   const scrollBy = (offset: number) => {
     galleryRef.current?.scrollBy({ left: offset, behavior: 'smooth' });
@@ -90,6 +101,10 @@ function CampaignGalleryInner() {
       refresh();
     }
   }, [completedCampaigns, refresh]);
+
+  useEffect(() => {
+    refreshCampaignProgress();
+  }, [progress?.completedSections.length, progress?.answeredQuestions.length, refreshCampaignProgress]);
 
   // Ensure active campaign is set to the first unlocked campaign
   useEffect(() => {
@@ -142,6 +157,7 @@ function CampaignGalleryInner() {
             c={c}
             active={c.id === activeCampaignId}
             onClick={() => !c.locked && setActiveCampaignId(c.id)}
+            progress={campaignProgress[c.id]}
           />
         ))}
       </div>

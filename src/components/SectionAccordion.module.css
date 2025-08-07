@@ -38,6 +38,10 @@
   gap: 0.5rem;
 }
 
+.progress {
+  padding: 0 1rem 0.5rem;
+}
+
 .check {
   color: #c9a40e;
   font-size: 1rem;
