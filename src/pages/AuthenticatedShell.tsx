@@ -1,13 +1,15 @@
 // src/pages/AuthenticatedShell.tsx
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { fetchUserAttributes } from 'aws-amplify/auth';
 
 import { Header as HeaderBar } from '../components/Header';
 import AnnouncementBanner from '../components/AnnouncementBanner';
-import CampaignGallery from '../components/CampaignGallery';
-import CampaignCanvas from '../components/CampaignCanvas';
 import UserStatsPanel from '../components/UserStatsPanel';
+import Skeleton from '../components/Skeleton';
+
+const CampaignGallery = lazy(() => import('../components/CampaignGallery'));
+const CampaignCanvas = lazy(() => import('../components/CampaignCanvas'));
 
 import { useUserProfile } from '../context/UserProfileContext';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
@@ -57,11 +59,15 @@ export default function AuthenticatedShell() {
             </div>
 
             <div className="auth-gallery">
-              <CampaignGallery />
+              <Suspense fallback={<Skeleton height="180px" />}>
+                <CampaignGallery />
+              </Suspense>
             </div>
 
             <div className="auth-canvas">
-              <CampaignCanvas userId={userId} />
+              <Suspense fallback={<Skeleton height="200px" />}>
+                <CampaignCanvas userId={userId} />
+              </Suspense>
             </div>
 
             <div className="auth-stats">

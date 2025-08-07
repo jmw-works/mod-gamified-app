@@ -7,6 +7,7 @@ import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import { useCampaigns, type UICampaign } from '../hooks/useCampaigns';
 import { useCampaignThumbnail } from '../hooks/useCampaignThumbnail';
 import ProgressContext from '../context/ProgressContext';
+import Skeleton from './Skeleton';
 
 
 // Optional thumbnail props for campaigns
@@ -78,9 +79,14 @@ function CampaignGalleryInner() {
     galleryRef.current?.scrollBy({ left: offset, behavior: 'smooth' });
   };
 
-  // Refresh campaigns whenever progress changes (unlocking new ones)
+  // Refresh campaigns only when the number of completed campaigns changes
+  const prevCompleted = useRef<number>(completedCampaigns?.length ?? 0);
   useEffect(() => {
-    refresh();
+    const len = completedCampaigns?.length ?? 0;
+    if (len !== prevCompleted.current) {
+      prevCompleted.current = len;
+      refresh();
+    }
   }, [completedCampaigns, refresh]);
 
   // Ensure active campaign is set to the first unlocked campaign
@@ -97,7 +103,20 @@ function CampaignGalleryInner() {
     }
   }, [campaigns, loading, activeCampaignId, setActiveCampaignId]);
 
-  if (loading) return <div>Loading campaigns…</div>;
+  if (loading)
+    return (
+      <div className={styles.campaignGallery}>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className={styles.card}>
+            <Skeleton className={styles.thumb} />
+            <div className={styles.cardContent}>
+              <Skeleton height="20px" width="80%" />
+              <Skeleton height="14px" width="60%" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   if (error) return <div>Error loading campaigns: {error.message}</div>;
   if (!campaigns?.length) return <div>No campaigns yet.</div>;
 

@@ -41,22 +41,41 @@ export function UserProfileProvider({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Load profile for current user
+  // Load profile for current user with simple localStorage cache
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     setError(null);
+    const cacheKey = `userProfile:${userId}`;
+
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as UserProfileModel;
+        setProfile(parsed);
+        setLoading(false);
+      } catch {
+        localStorage.removeItem(cacheKey);
+      }
+    } else {
+      setLoading(true);
+    }
+
     (async () => {
       try {
         const res = await listUserProfiles({
           filter: { userId: { eq: userId } },
         });
         const first = (res?.data ?? [])[0] ?? null;
-        if (!cancelled) setProfile(first);
+        if (!cancelled) {
+          setProfile(first);
+          setLoading(false);
+          localStorage.setItem(cacheKey, JSON.stringify(first));
+        }
       } catch (e) {
-        if (!cancelled) setError(e as Error);
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setError(e as Error);
+          setLoading(false);
+        }
       }
     })();
 
@@ -69,15 +88,17 @@ export function UserProfileProvider({
     async (displayName: string) => {
       try {
         if (profile?.id) {
-          const updated = await updateUserProfile({
-            id: profile.id,
-            displayName,
-          });
-          const updatedProfile =
-            (updated as unknown as { data?: UserProfileModel }).data ??
-            (updated as unknown as UserProfileModel) ??
-            profile;
+        const updated = await updateUserProfile({
+          id: profile.id,
+          displayName,
+        });
+        const updatedProfile =
+          (updated as unknown as { data?: UserProfileModel }).data ??
+          (updated as unknown as UserProfileModel) ??
+          profile;
           setProfile(updatedProfile);
+          const cacheKey = `userProfile:${userId}`;
+          localStorage.setItem(cacheKey, JSON.stringify(updatedProfile));
         } else {
           const created = await createUserProfile({
             userId,
@@ -89,6 +110,8 @@ export function UserProfileProvider({
             (created as unknown as UserProfileModel) ??
             null;
           setProfile(createdProfile);
+          const cacheKey = `userProfile:${userId}`;
+          localStorage.setItem(cacheKey, JSON.stringify(createdProfile));
         }
       } catch (e) {
         setError(e as Error);
