@@ -55,8 +55,8 @@ interface ProviderProps {
   children: ReactNode;
 }
 
-const XP_FOR_SECTION = 50;
-const XP_FOR_CAMPAIGN = 200;
+const XP_FOR_SECTION = 40;
+const XP_FOR_CAMPAIGN = 150;
 
 type UserProgressModel = Schema['UserProgress']['type'];
 
