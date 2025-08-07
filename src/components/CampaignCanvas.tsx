@@ -15,8 +15,14 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const { activeCampaignId: campaignId } = useActiveCampaign();
   const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
 
-  const { questions, sectionTextByNumber, loading, error, sectionIdByNumber } =
-    useCampaignQuizData(campaignId);
+  const {
+    questions,
+    sectionTextByNumber,
+    sectionTitleByNumber,
+    loading,
+    error,
+    sectionIdByNumber,
+  } = useCampaignQuizData(campaignId);
 
   const {
     handleAnswer,
@@ -67,13 +73,19 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     return <div>Campaign complete, {profile?.displayName ?? 'Friend'}!</div>;
 
   const current = questions[index];
-  const sectionText = current.section ? sectionTextByNumber.get(current.section) : undefined;
+  const sectionTitle = current.section
+    ? sectionTitleByNumber.get(current.section)
+    : undefined;
+  const sectionText = current.section
+    ? sectionTextByNumber.get(current.section)
+    : undefined;
 
   const onAnswer = async (answerId: string) => {
     if (authStatus !== 'authenticated' || !userId) {
       onRequireAuth?.();
       return;
     }
+
     const ans = current.answers.find((a) => a.id === answerId);
     const isCorrect = !!ans?.isCorrect;
 
@@ -110,7 +122,8 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   return (
     <div data-campaign-id={campaignId ?? ''} data-user-id={userId}>
       {infoText && <p>{infoText}</p>}
-      {sectionText && <p>{sectionText}</p>}
+      {sectionTitle && <h3 className="current-section-title">{sectionTitle}</h3>}
+      {sectionText && <p className="current-section-text">{sectionText}</p>}
 
       <div className="question-item">
         <p>{current.text}</p>
@@ -123,5 +136,6 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     </div>
   );
 }
+
 
 
