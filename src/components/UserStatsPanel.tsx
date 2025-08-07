@@ -12,7 +12,7 @@ import {
 import { useProgress } from '../context/ProgressContext';
 import { useUserProfile } from '../context/UserProfileContext';
 import {
-  XP_PER_LEVEL,
+  xpForLevel,
   getXPWithinLevel,
   calculateXPProgress,
   getXPToNextLevel,
@@ -68,9 +68,13 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
     'N/A';
 
   // Per-level math
-  const progressWithinLevel = getXPWithinLevel(safeXP, XP_PER_LEVEL);
-  const levelPercent = calculateXPProgress(progressWithinLevel, XP_PER_LEVEL);
-  const nextLevelIn = getXPToNextLevel(safeXP, XP_PER_LEVEL);
+  const requiredXP = xpForLevel(level);
+  const progressWithinLevel = getXPWithinLevel(safeXP);
+  const levelPercent = calculateXPProgress(
+    progressWithinLevel,
+    Number.isFinite(requiredXP) ? requiredXP : 1,
+  );
+  const nextLevelIn = getXPToNextLevel(safeXP);
 
   const rank = getRankForLevel(level);
 
@@ -112,7 +116,8 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
       <Flex direction="row" alignItems="center" gap="small" marginBottom="small">
         <Badge variation="info">Level {level}</Badge>
         <Text color={tokens.colors.font.secondary} fontSize="0.9rem">
-          {progressWithinLevel}/{XP_PER_LEVEL} XP this level
+          {progressWithinLevel}/
+          {Number.isFinite(requiredXP) ? requiredXP : '∞'} XP this level
         </Text>
       </Flex>
 

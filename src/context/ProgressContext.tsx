@@ -55,7 +55,6 @@ interface ProviderProps {
   children: ReactNode;
 }
 
-const XP_PER_LEVEL = 100;
 type UserProgressModel = Schema['UserProgress']['type'];
 
 function startOfDay(d: Date) {
@@ -134,7 +133,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     };
   }, [userId]);
 
-  const level = useMemo(() => getLevelFromXP(xp, XP_PER_LEVEL), [xp]);
+  const level = useMemo(() => getLevelFromXP(xp), [xp]);
 
   const awardXP = useCallback(
     (amount: number) => {

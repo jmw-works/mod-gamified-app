@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Card, Button, Heading, Text } from '@aws-amplify/ui-react';
 import { useProgress } from '../context/ProgressContext';
 import {
-  XP_PER_LEVEL,
+  xpForLevel,
   getXPWithinLevel,
   calculateXPProgress,
 } from '../utils/xp';
@@ -42,10 +42,16 @@ export default function AnnouncementBanner({ onLevelUp, onDismiss }: Announcemen
       newDesc = `${count} completed section${count === 1 ? '' : 's'}!`;
       newIndicator = '✓';
     } else if (xp > prevXP.current) {
-      const currentXP = getXPWithinLevel(xp, XP_PER_LEVEL);
-      const pct = Math.round(calculateXPProgress(currentXP, XP_PER_LEVEL));
+      const currentXP = getXPWithinLevel(xp);
+      const required = xpForLevel(level);
+      const pct = Math.round(
+        calculateXPProgress(
+          currentXP,
+          Number.isFinite(required) ? required : 1,
+        ),
+      );
       newTitle = 'Leveling up!';
-      newDesc = `You’ve earned ${currentXP} XP toward ${XP_PER_LEVEL}. Keep going to unlock the next section.`;
+      newDesc = `You’ve earned ${currentXP} XP toward ${required}. Keep going to unlock the next section.`;
       newIndicator = `${pct}%`;
     }
 
