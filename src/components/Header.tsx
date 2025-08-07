@@ -1,15 +1,10 @@
 // src/components/Header.tsx
-import { forwardRef, useMemo } from 'react';
+import { forwardRef } from 'react';
 import { Button, Flex, Text } from '@aws-amplify/ui-react';
+import { useProgress } from '../context/ProgressContext';
 
 export interface HeaderProps {
   signOut?: () => void;
-
-  // Stats passed from AuthenticatedContent
-  currentXP?: number;
-  maxXP?: number;
-  bountiesCompleted?: number;
-  streakDays?: number;
 
   /** Controls overall header height (px). Default 140. */
   height?: number;
@@ -26,10 +21,6 @@ export interface HeaderProps {
   pillSubLabelColor?: string;
 }
 
-function computeLevel(currentXP = 0, maxXP = 100) {
-  if (maxXP <= 0) return 1;
-  return Math.max(1, Math.floor(currentXP / maxXP) + 1);
-}
 
 function StatPill({
   iconSrc,
@@ -86,10 +77,6 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
   (
     {
       signOut,
-      currentXP = 0,
-      maxXP = 100,
-      bountiesCompleted = 0,
-      streakDays = 0,
       height = 140,
       logoSize = 95,
       iconSize = 75,
@@ -99,8 +86,10 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
     },
     ref
   ) => {
-    const level = useMemo(() => computeLevel(currentXP, maxXP), [currentXP, maxXP]);
-    const xpSub = `${currentXP}/${maxXP} XP`;
+    const { xp, level, streak, completedSections } = useProgress();
+    const maxXP = level * 100;
+    const xpSub = `${xp}/${maxXP} XP`;
+    const bountiesCompleted = completedSections.length;
 
     return (
       <header
@@ -172,7 +161,7 @@ export const Header = forwardRef<HTMLDivElement, HeaderProps>(
           <StatPill
             iconSrc="/blaze.png"
             iconAlt="Daily streak"
-            label={`${streakDays} day blaze`}
+            label={`${streak} day blaze`}
             sublabel="daily streak"
             iconSize={iconSize}
             labelColor={pillLabelColor}

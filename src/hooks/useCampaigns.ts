@@ -1,5 +1,5 @@
 // src/hooks/useCampaigns.ts
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
 
@@ -34,7 +34,7 @@ export function useCampaigns(userId?: string | null) {
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
       // 2) fetch user campaign progress
-      let completedIds = new Set<string>();
+      const completedIds = new Set<string>();
       if (userId) {
         const pRes = await client.models.CampaignProgress.list({
           filter: { userId: { eq: userId } },

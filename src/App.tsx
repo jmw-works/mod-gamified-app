@@ -24,13 +24,13 @@ function AuthHeader() {
 export default function App() {
   return (
     <Authenticator components={{ Header: AuthHeader }}>
-      {/* At this point we’re authenticated; no null return means no TS error */}
       <ActiveCampaignProvider>
         <AuthenticatedShell />
       </ActiveCampaignProvider>
     </Authenticator>
   );
 }
+
 
 
 

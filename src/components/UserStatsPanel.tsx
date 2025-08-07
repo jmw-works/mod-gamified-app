@@ -1,5 +1,6 @@
 // src/components/UserStatsPanel.tsx
 import { Flex, Heading, Text, View, useTheme, Divider, Badge } from '@aws-amplify/ui-react';
+import { useProgress } from '../context/ProgressContext';
 
 interface UserAttributes {
   name?: string;
@@ -12,9 +13,6 @@ interface UserStatsPanelProps {
     username?: string;
     attributes: UserAttributes;
   };
-  currentXP: number;
-  maxXP: number;
-  percentage: number; // overall completion; not used for XP math
   headerHeight: number;
   spacing: number;
 }
@@ -96,19 +94,13 @@ function getRankForLevel(level: number): { title: string; notes: string; tier: n
   return { tier: 1, title: 'Novice Relic Seeker', notes: 'First login/first XP gain' };
 }
 
-export default function UserStatsPanel({
-  user,
-  currentXP,
-  maxXP,
-  percentage,
-  headerHeight,
-  spacing,
-}: UserStatsPanelProps) {
+export default function UserStatsPanel({ user, headerHeight, spacing }: UserStatsPanelProps) {
   const { tokens } = useTheme();
+  const { xp, level } = useProgress();
 
   // Defensive defaults
-  const safeXP = Number.isFinite(currentXP) ? Math.max(0, currentXP) : 0;
-  const safeMax = Number.isFinite(maxXP) && maxXP > 0 ? maxXP : 100;
+  const safeXP = Number.isFinite(xp) ? Math.max(0, xp) : 0;
+  const safeMax = 100;
 
   // Prefer saved display name; fall back to username/email
   const shownName =
@@ -118,7 +110,6 @@ export default function UserStatsPanel({
     'N/A';
 
   // Per-level math
-  const level = Math.floor(safeXP / safeMax) + 1;
   const progressWithinLevel = safeXP % safeMax;
   const levelPercent = (progressWithinLevel / safeMax) * 100; // fractional for smooth animation
   const nextLevelIn = Math.max(0, safeMax - progressWithinLevel);
