@@ -8,6 +8,7 @@ import UserProfileContext from '../context/UserProfileContext';
 import { listCampaigns } from '../services/campaignService';
 import SectionAccordion from './SectionAccordion';
 import { fallbackCampaigns } from '../utils/fallbackContent';
+import Skeleton from './Skeleton';
 
 interface CampaignCanvasProps {
   userId: string;
@@ -83,7 +84,7 @@ interface CampaignCanvasProps {
       return <div>Please sign in to play.</div>;
     }
     if (!campaignId) return <div>Select a campaign to begin.</div>;
-  if (loading) return <div>Loading campaign…</div>;
+  if (loading) return <Skeleton height="200px" />;
   if (error) return <div>Error loading campaign: {error.message}</div>;
   const sectionsWithQuestions = sections.filter((s) => s.questions.length > 0);
   if (!sectionsWithQuestions.length)
