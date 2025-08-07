@@ -83,6 +83,7 @@ export function useCampaigns(userId?: string | null) {
 
       setCampaigns(ui);
     } catch (e) {
+      console.error('Error loading campaigns', e);
       setErr(e as Error);
     } finally {
       setLoading(false);
@@ -120,6 +121,7 @@ export function useCampaigns(userId?: string | null) {
 
       await load(); // refresh gallery lock state
     } catch (e) {
+      console.error('Error marking campaign completed', e);
       setErr(e as Error);
     }
   }, [userId, load]);
