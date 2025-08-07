@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Question as QuestionUI } from '../types/QuestionTypes';
+import type { Answer, Question as QuestionUI } from '../types/QuestionTypes';
 import { listSections } from '../services/sectionService';
 import { listQuestions } from '../services/questionService';
 
@@ -122,11 +122,13 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
               correctAnswer: row.correctAnswer ?? '',
               hint: row.hint ?? undefined,
               explanation: row.explanation ?? undefined,
-              answers: (row.answers ?? []).map((ans) => ({
-                id: ans.id,
-                content: ans.content,
-                isCorrect: !!ans.isCorrect,
-              })),
+              answers: row.answers
+                ? row.answers.map((ans): Answer => ({
+                    id: ans.id,
+                    content: ans.content,
+                    isCorrect: !!ans.isCorrect,
+                  }))
+                : undefined,
             });
           }
         }

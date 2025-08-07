@@ -11,6 +11,13 @@ export interface Question {
   correctAnswer: string;
   hint?: string;
   explanation?: string;
+  answers?: Answer[];
+}
+
+export interface Answer {
+  id: string;
+  content: string;
+  isCorrect: boolean;
 }
 
 export interface SubmitArgs {
