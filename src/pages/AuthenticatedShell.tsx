@@ -15,6 +15,7 @@ import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { ProgressProvider } from '../context/ProgressContext';
 import { ActiveCampaignProvider } from '../context/ActiveCampaignContext';
 import { UserProfileProvider } from '../context/UserProfileContext';
+import DisplayNamePrompt from '../components/DisplayNamePrompt';
 
 export default function AuthenticatedShell() {
   const { user, signOut, authStatus } = useAuthenticator((ctx) => [ctx.user, ctx.authStatus]);
@@ -58,6 +59,7 @@ export default function AuthenticatedShell() {
     <UserProfileProvider userId={userId} email={emailFromAttrs}>
       <ActiveCampaignProvider>
         <ProgressProvider userId={userId}>
+          <DisplayNamePrompt />
           <div style={gridStyle}>
             <div style={{ gridArea: 'header' }}>
               <HeaderBar ref={headerRef} signOut={signOut} />
