@@ -1,22 +1,35 @@
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
+import { ServiceError } from './serviceError';
 
 const client = generateClient<Schema>();
 
-export function listUserProfiles(
+export async function listUserProfiles(
   options?: Parameters<typeof client.models.UserProfile.list>[0]
 ) {
-  return client.models.UserProfile.list(options);
+  try {
+    return await client.models.UserProfile.list(options);
+  } catch (err) {
+    throw new ServiceError('Failed to list user profiles', { cause: err });
+  }
 }
 
-export function createUserProfile(
+export async function createUserProfile(
   input: Parameters<typeof client.models.UserProfile.create>[0]
 ) {
-  return client.models.UserProfile.create(input);
+  try {
+    return await client.models.UserProfile.create(input);
+  } catch (err) {
+    throw new ServiceError('Failed to create user profile', { cause: err });
+  }
 }
 
-export function updateUserProfile(
+export async function updateUserProfile(
   input: Parameters<typeof client.models.UserProfile.update>[0]
 ) {
-  return client.models.UserProfile.update(input);
+  try {
+    return await client.models.UserProfile.update(input);
+  } catch (err) {
+    throw new ServiceError('Failed to update user profile', { cause: err });
+  }
 }

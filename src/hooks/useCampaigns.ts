@@ -96,22 +96,25 @@ export function useCampaigns(userId?: string | null) {
 
   const markCampaignCompleted = useCallback(async (campaignId: string) => {
     if (!userId) return;
+    try {
+      const list = await listCampaignProgress({
+        filter: { userId: { eq: userId }, campaignId: { eq: campaignId } },
+        selectionSet: ['id', 'completed'],
+      });
 
-    const list = await listCampaignProgress({
-      filter: { userId: { eq: userId }, campaignId: { eq: campaignId } },
-      selectionSet: ['id', 'completed'],
-    });
-
-    const row = list.data?.[0] ?? null;
-    if (row) {
-      if (!row.completed) {
-        await updateCampaignProgress({ id: row.id, completed: true });
+      const row = list.data?.[0] ?? null;
+      if (row) {
+        if (!row.completed) {
+          await updateCampaignProgress({ id: row.id, completed: true });
+        }
+      } else {
+        await createCampaignProgress({ userId, campaignId, completed: true });
       }
-    } else {
-      await createCampaignProgress({ userId, campaignId, completed: true });
-    }
 
-    await load(); // refresh gallery lock state
+      await load(); // refresh gallery lock state
+    } catch (e) {
+      setErr(e as Error);
+    }
   }, [userId, load]);
 
   return { campaigns, loading, error, refresh: load, markCampaignCompleted };

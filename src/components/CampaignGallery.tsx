@@ -118,7 +118,7 @@ function CampaignCardView({
 function CampaignGalleryInner() {
   const { user } = useAuthenticator((ctx) => [ctx.user]);
   const userId = user?.userId;
-  const { campaigns, loading, refresh } = useCampaigns(userId);
+  const { campaigns, loading, error, refresh } = useCampaigns(userId);
   const { activeCampaignId, setActiveCampaignId } = useActiveCampaign();
   const { completedCampaigns } = useProgress();
 
@@ -142,6 +142,7 @@ function CampaignGalleryInner() {
   }, [campaigns, loading, activeCampaignId, setActiveCampaignId]);
 
   if (loading) return <div>Loading campaigns…</div>;
+  if (error) return <div>Error loading campaigns: {error.message}</div>;
   if (!campaigns?.length) return <div>No campaigns yet.</div>;
 
   return (
