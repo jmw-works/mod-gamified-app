@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   useAuthenticator,
   Heading,
   Text,
-  useTheme,
 } from '@aws-amplify/ui-react';
 import { fetchUserAttributes } from 'aws-amplify/auth';
 
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../amplify/data/resource';
+import CampaignGallery from '../components/CampaignGallery';
+import { useCampaigns } from '../hooks/useCampaigns';
+import { useActiveCampaign } from '../hooks/useActiveCampaign';
 
 import { Header } from '../components/Header';
 import QuizSection from '../components/QuizSection';
@@ -21,24 +21,18 @@ import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { calculateXPProgress } from '../utils/xp';
 
-const THUMBNAIL_BASE_URL =
-  'https://amplify-dg9xethdak0e7-mai-amplifydataamplifycodege-5wzlzqzwsqsa.s3.us-west-1.amazonaws.com/public/thumbnails';
-
-const client = generateClient<Schema>();
-
-export default function AuthenticatedContent() {
+export default function AuthenticatedShell() {
   const { user, signOut, authStatus } = useAuthenticator((ctx) => [
     ctx.user,
     ctx.authStatus,
   ]);
   const userId = user?.userId ?? '';
-  const { tokens } = useTheme();
 
   const [attrs, setAttrs] = useState<Record<string, string> | null>(null);
   const [attrsError, setAttrsError] = useState<Error | null>(null);
 
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
+  const { activeCampaignId, setActiveCampaignId } = useActiveCampaign();
+  const { campaigns, loading: campaignsLoading } = useCampaigns(userId);
   const [showBanner, setShowBanner] = useState(true);
   const [showNameModal, setShowNameModal] = useState(false);
 
@@ -49,7 +43,6 @@ export default function AuthenticatedContent() {
   const {
     questions,
     progress,
-    loading: quizLoading,
     error: quizError,
     handleAnswer,
     orderedSectionNumbers,
@@ -77,34 +70,6 @@ export default function AuthenticatedContent() {
     return () => {
       mounted = false;
     };
-  }, [authStatus]);
-
-  useEffect(() => {
-    async function loadCampaigns() {
-      try {
-        const { data, errors } = await client.models.Campaign.list({
-          filter: { isActive: { eq: true } },
-        });
-
-        if (errors) console.error('Campaign list errors:', errors);
-
-        const parsed = (data ?? []).map((c) => ({
-          id: c.id,
-          title: c.title,
-          description: c.description ?? '',
-          thumbnailFile: c.thumbnailKey ?? '',
-          isLocked: false,
-        }));
-
-        setCampaigns(parsed);
-      } catch (err) {
-        console.error('Failed to fetch campaigns:', err);
-      }
-    }
-
-    if (authStatus === 'authenticated') {
-      loadCampaigns();
-    }
   }, [authStatus]);
 
   const displayName = useMemo(() => {
@@ -155,11 +120,6 @@ export default function AuthenticatedContent() {
 
   const mergedError = profileError ?? quizError ?? attrsError ?? null;
 
-  const onSelectCampaign = useCallback((id: string, locked?: boolean) => {
-    if (locked) return;
-    setActiveCampaignId(id);
-  }, []);
-
   const groupedBySection = useMemo(() => {
     const map = new Map<number, ReturnType<typeof questions.filter>>();
     for (const q of questions) {
@@ -201,68 +161,12 @@ export default function AuthenticatedContent() {
 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24, padding: `0 ${spacing}px` }}>
           {!activeCampaignId && (
-            <div style={{ width: 260, display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {campaigns.length > 0 ? (
-  campaigns.map((campaign) => {
-    const imgUrl = campaign.thumbnailFile
-      ? `${THUMBNAIL_BASE_URL}/${campaign.thumbnailFile}`
-      : '';
-    return (
-      <div
-        key={campaign.id}
-        onClick={() => onSelectCampaign(campaign.id, campaign.isLocked)}
-        style={{
-          opacity: campaign.isLocked ? 0.4 : 1,
-          cursor: campaign.isLocked ? 'not-allowed' : 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          textAlign: 'center',
-        }}
-        title={campaign.description || ''}
-      >
-        {imgUrl ? (
-          <img
-            src={imgUrl}
-            alt={campaign.title}
-            width={200}
-            height={200}
-            style={{ objectFit: 'contain', marginBottom: 12 }}
-          />
-        ) : (
-          <div style={{ width: 180, height: 200, background: '#eee', marginBottom: 12 }} />
-        )}
-        <Text fontSize="1rem">{campaign.title}</Text>
-      </div>
-    );
-  })
-) : (
-  ['campaign1.png', 'campaign2.png', 'campaign3.png'].map((filename, idx) => (
-    <div
-      key={`fallback-${idx}`}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        textAlign: 'center',
-        cursor: 'default',
-      }}
-    >
-      <img
-        src={`/${filename}`}
-        alt={`Fallback ${idx + 1}`}
-        width={200}
-        height={200}
-        style={{ objectFit: 'contain', marginBottom: 12 }}
-      />
-      <Text fontSize="1rem" color="#888">
-        Coming Soon
-      </Text>
-    </div>
-  ))
-)}
-
-            </div>
+            <CampaignGallery
+              campaigns={campaigns}
+              loading={campaignsLoading}
+              activeCampaignId={activeCampaignId}
+              onSelect={setActiveCampaignId}
+            />
           )}
 
           <div style={{ flex: 2 }}>
