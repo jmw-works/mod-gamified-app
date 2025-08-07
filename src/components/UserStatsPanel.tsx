@@ -1,6 +1,12 @@
 // src/components/UserStatsPanel.tsx
 import { Flex, Heading, Text, View, useTheme, Divider, Badge } from '@aws-amplify/ui-react';
 import { useProgress } from '../context/ProgressContext';
+import {
+  XP_PER_LEVEL,
+  getXPWithinLevel,
+  calculateXPProgress,
+  getXPToNextLevel,
+} from '../utils/xp';
 
 interface UserAttributes {
   name?: string;
@@ -100,7 +106,6 @@ export default function UserStatsPanel({ user, headerHeight, spacing }: UserStat
 
   // Defensive defaults
   const safeXP = Number.isFinite(xp) ? Math.max(0, xp) : 0;
-  const safeMax = 100;
 
   // Prefer saved display name; fall back to username/email
   const shownName =
@@ -110,9 +115,9 @@ export default function UserStatsPanel({ user, headerHeight, spacing }: UserStat
     'N/A';
 
   // Per-level math
-  const progressWithinLevel = safeXP % safeMax;
-  const levelPercent = (progressWithinLevel / safeMax) * 100; // fractional for smooth animation
-  const nextLevelIn = Math.max(0, safeMax - progressWithinLevel);
+  const progressWithinLevel = getXPWithinLevel(safeXP, XP_PER_LEVEL);
+  const levelPercent = calculateXPProgress(progressWithinLevel, XP_PER_LEVEL);
+  const nextLevelIn = getXPToNextLevel(safeXP, XP_PER_LEVEL);
 
   const rank = getRankForLevel(level);
 
@@ -139,7 +144,7 @@ export default function UserStatsPanel({ user, headerHeight, spacing }: UserStat
       <Flex direction="row" alignItems="center" gap="small" marginBottom="small">
         <Badge variation="info">Level {level}</Badge>
         <Text color={tokens.colors.font.secondary} fontSize="0.9rem">
-          {progressWithinLevel}/{safeMax} XP this level
+          {progressWithinLevel}/{XP_PER_LEVEL} XP this level
         </Text>
       </Flex>
 

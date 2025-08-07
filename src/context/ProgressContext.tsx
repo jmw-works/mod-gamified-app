@@ -18,6 +18,7 @@ import {
   updateCampaignProgress,
 } from '../services/progressService';
 import type { Schema } from '../../amplify/data/resource';
+import { getLevelFromXP } from '../utils/xp';
 
 type ProgressListener = (state: {
   xp: number;
@@ -47,7 +48,6 @@ interface ProviderProps {
 }
 
 const XP_PER_LEVEL = 100;
-
 type UserProgressModel = Schema['UserProgress']['type'];
 
 export function ProgressProvider({ userId, children }: ProviderProps) {
@@ -66,17 +66,22 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
           filter: { userId: { eq: userId } },
           selectionSet: ['id', 'totalXP', 'dailyStreak', 'completedSections'],
         });
+
         let row: UserProgressModel | null = (res.data ?? [])[0] ?? null;
+
         if (!row) {
           const created = await createUserProgress({ userId });
           row =
             (created as { data?: UserProgressModel }).data ??
             ((created as unknown) as UserProgressModel);
         }
+
         if (cancelled || !row) return;
+
         setProgressId(row.id);
         setXP(row.totalXP ?? 0);
         setStreak(row.dailyStreak ?? 0);
+
         const sections = (row.completedSections ?? []).filter(
           (n): n is number => typeof n === 'number'
         );
@@ -86,19 +91,22 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
           filter: { and: [{ userId: { eq: userId } }, { completed: { eq: true } }] },
           selectionSet: ['campaignId'],
         });
-        if (!cancelled)
+
+        if (!cancelled) {
           setCompletedCampaigns(cpRes.data?.map((c) => c.campaignId) ?? []);
+        }
       } catch (e) {
         console.warn('Failed to load progress', e);
       }
     }
+
     load();
     return () => {
       cancelled = true;
     };
   }, [userId]);
 
-  const level = useMemo(() => Math.floor(xp / XP_PER_LEVEL) + 1, [xp]);
+  const level = useMemo(() => getLevelFromXP(xp, XP_PER_LEVEL), [xp]);
 
   const awardXP = useCallback(
     (amount: number) => {
@@ -195,3 +203,4 @@ export function useProgress() {
 }
 
 export default ProgressContext;
+
