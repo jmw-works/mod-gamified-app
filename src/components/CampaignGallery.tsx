@@ -1,6 +1,6 @@
 // src/components/CampaignGallery.tsx
 import { memo, useContext, useEffect, useRef } from 'react';
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaLock } from 'react-icons/fa';
 import styles from './CampaignGallery.module.css';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
@@ -31,13 +31,18 @@ function CampaignCardView({
     fallbackUrl: c.thumbnailUrl ?? undefined,
   });
 
-    return (
-      <button
-        type="button"
-        aria-pressed={active}
-        onClick={onClick}
-        className={`${styles.card} ${active ? styles.cardActive : ''}`}
-      >
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      aria-disabled={c.locked}
+      disabled={c.locked}
+      onClick={onClick}
+      className={`${styles.card} ${active ? styles.cardActive : ''} ${
+        c.locked ? styles.cardLocked : ''
+      }`}
+    >
+      {c.locked && <FaLock className={styles.lockIcon} aria-hidden />}
       {/* Thumbnail */}
       {url ? (
         <img
@@ -54,17 +59,14 @@ function CampaignCardView({
 
       {/* Content */}
       <div className={styles.cardContent}>
-        <h4 className={styles.cardTitle}>
-          {c.title}
-          {c.locked ? ' 🔒' : ''}
-        </h4>
+        <h4 className={styles.cardTitle}>{c.title}</h4>
         {c.description ? (
           <p className={styles.cardDescription}>{c.description}</p>
         ) : null}
       </div>
-      </button>
-    );
-  }
+    </button>
+  );
+}
 
 function CampaignGalleryInner() {
   const { user } = useAuthenticator((ctx) => [ctx.user]);

@@ -1,20 +1,19 @@
 import { useEffect, useMemo } from 'react';
 import { Heading, Text } from '@aws-amplify/ui-react';
 
-import QuizSection from './QuizSection';
+import SectionAccordion from './SectionAccordion';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import type { Progress } from '../types/ProgressTypes';
 import { createEmptyProgress } from '../types/ProgressTypes';
 
 interface Props {
-  userId: string;
   displayName?: string;
   onProgress?: (p: Progress) => void;
   onRequireAuth?: () => void;
 }
 
-export default function CampaignCanvas({ userId, displayName, onProgress }: Props) {
+export default function CampaignCanvas({ displayName, onProgress }: Props) {
   const { activeCampaignId } = useActiveCampaign();
 
   const {
@@ -23,6 +22,8 @@ export default function CampaignCanvas({ userId, displayName, onProgress }: Prop
     handleAnswer,
     orderedSectionNumbers,
     sectionTextByNumber,
+    sectionTitleByNumber,
+    sectionIdByNumber,
   } = useCampaignQuizData(activeCampaignId);
 
   useEffect(() => {
@@ -39,6 +40,37 @@ export default function CampaignCanvas({ userId, displayName, onProgress }: Prop
     }
     return map;
   }, [questions]);
+
+  useEffect(() => {
+    if (!progress) return;
+    for (const sectionNum of orderedSectionNumbers) {
+      const questionsInSection = groupedBySection.get(sectionNum) ?? [];
+      const allAnswered = questionsInSection.every((q) =>
+        progress.answeredQuestions.includes(q.id)
+      );
+      if (
+        allAnswered &&
+        !progress.completedSections.includes(sectionNum)
+      ) {
+        progress.markSectionComplete(
+          sectionNum,
+          sectionIdByNumber.get(sectionNum)
+        );
+      }
+    }
+    const allSectionsDone = orderedSectionNumbers.every((n) =>
+      progress.completedSections.includes(n)
+    );
+    if (allSectionsDone && activeCampaignId) {
+      progress.markCampaignComplete(activeCampaignId);
+    }
+  }, [
+    progress,
+    groupedBySection,
+    orderedSectionNumbers,
+    sectionIdByNumber,
+    activeCampaignId,
+  ]);
 
   const safeProgress = progress ?? createEmptyProgress();
 
@@ -68,16 +100,39 @@ export default function CampaignCanvas({ userId, displayName, onProgress }: Prop
           !safeProgress.completedSections.includes(orderedSectionNumbers[idx - 1]);
 
         return (
-          <QuizSection
+          <SectionAccordion
             key={`sec-${sectionNum}`}
-            title={`Section ${sectionNum}`}
-            educationalText={sectionTextByNumber.get(sectionNum) ?? ''}
-            questions={questionsInSection}
-            progress={safeProgress}
-            handleAnswer={handleAnswer}
-            isLocked={isLocked}
-            initialOpen={idx === 0}
-          />
+            title={sectionTitleByNumber.get(sectionNum) ?? `Section ${sectionNum}`}
+            locked={isLocked}
+            sectionId={sectionIdByNumber.get(sectionNum)}
+            completed={safeProgress.completedSections.includes(sectionNum)}
+          >
+            <div style={{ padding: '0.75rem 1rem' }}>
+              <p>{sectionTextByNumber.get(sectionNum) ?? ''}</p>
+              <ul>
+                {questionsInSection.map((q) => (
+                  <li key={q.id}>
+                    {q.text}
+                    {handleAnswer && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleAnswer({
+                            questionId: q.id,
+                            userAnswer: '',
+                            isCorrect: false,
+                            sectionId: sectionIdByNumber.get(sectionNum),
+                          })
+                        }
+                      >
+                        Answer
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </SectionAccordion>
         );
       })}
     </>
