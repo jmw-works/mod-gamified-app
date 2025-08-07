@@ -1,5 +1,4 @@
 // src/components/XPBar.tsx
-import React from 'react';
 import { Text, useTheme } from '@aws-amplify/ui-react';
 
 /** Gold, animated XP bar (extracted from UserStatsPanel) */
