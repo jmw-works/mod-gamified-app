@@ -35,7 +35,8 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const { profile } = useUserProfile();
 
   const [index, setIndex] = useState(0);
-  const [response, setResponse] = useState('');
+  const [written, setWritten] = useState('');
+  const [inputError, setInputError] = useState<string | null>(null);
   const [infoText, setInfoText] = useState<string | null>(null);
 
   // Reset index when campaign or questions change
@@ -87,12 +88,19 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       return;
     }
 
+    const trimmed = written.trim();
+    if (!trimmed) {
+      setInputError('Please enter a response before submitting.');
+      return;
+    }
+    setInputError(null);
+
     const isCorrect =
-      response.trim().toLowerCase() === current.correctAnswer?.trim().toLowerCase();
+      trimmed.toLowerCase() === current.correctAnswer?.trim().toLowerCase();
 
     await handleAnswer({
       questionId: current.id,
-      responseText: response,
+      responseText: trimmed,
       isCorrect,
       xp: current.xpValue ?? undefined,
       sectionId: sectionIdByNumber.get(current.section),
@@ -119,7 +127,7 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       }
     }
 
-    setResponse('');
+    setWritten('');
     setIndex((prev) => prev + 1);
   };
 
@@ -133,9 +141,10 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
         <p>{current.text}</p>
         <input
           type="text"
-          value={response}
-          onChange={(e) => setResponse(e.target.value)}
+          value={written}
+          onChange={(e) => setWritten(e.target.value)}
         />
+        {inputError && <p role="alert">{inputError}</p>}
         <button onClick={onSubmit}>Submit</button>
       </div>
     </div>
