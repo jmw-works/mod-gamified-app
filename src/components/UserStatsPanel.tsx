@@ -59,7 +59,7 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
   const containerStyle = {
     position: 'sticky' as const,
     top: headerHeight + spacing,
-    maxWidth: '320px',
+    maxWidth: 'clamp(240px, 50vw, 320px)',
   };
 
   if (profileLoading)
