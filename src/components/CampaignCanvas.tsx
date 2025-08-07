@@ -1,260 +1,85 @@
-import { useContext, useEffect, useMemo, useState } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import { useEffect, useMemo } from 'react';
+import { Heading, Text } from '@aws-amplify/ui-react';
+
+import QuizSection from './QuizSection';
 import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
-import UserProfileContext from '../context/UserProfileContext';
-import { listCampaigns } from '../services/campaignService';
-import SectionAccordion from './SectionAccordion';
-import { fallbackCampaigns } from '../utils/fallbackContent';
-import Skeleton from './Skeleton';
+import type { Progress } from '../types/ProgressTypes';
+import { createEmptyProgress } from '../types/ProgressTypes';
 
-const markdownSanitizeSchema = {
-  ...defaultSchema,
-  attributes: {
-    ...defaultSchema.attributes,
-    '*': [...(defaultSchema.attributes?.['*'] ?? []), 'className', 'style'],
-  },
-};
-
-interface CampaignCanvasProps {
+interface Props {
   userId: string;
+  displayName?: string;
+  onProgress?: (p: Progress) => void;
   onRequireAuth?: () => void;
 }
 
-export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvasProps) {
-  const { activeCampaignId: campaignId } = useActiveCampaign();
-  const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
-  const { sections, loading, error, progress, handleAnswer } = useCampaignQuizData(campaignId);
-  const isGuest = authStatus !== 'authenticated' || !userId;
-  const markSectionComplete = progress?.markSectionComplete;
-  const markCampaignComplete = progress?.markCampaignComplete;
-  const answeredQuestions = progress?.answeredQuestions ?? [];
-  const completedSections = progress?.completedSections ?? [];
+export default function CampaignCanvas({ userId, displayName, onProgress }: Props) {
+  const { activeCampaignId } = useActiveCampaign();
 
-  const userProfile = useContext(UserProfileContext);
-  const profile = userProfile?.profile ?? null;
-
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [response, setResponse] = useState('');
-  const [infoText, setInfoText] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [showSignupPrompt, setShowSignupPrompt] = useState(false);
-  const [answerState, setAnswerState] =
-    useState<'idle' | 'correct' | 'incorrect'>('idle');
-
-  const onToggle = (idx: number) => {
-    if (isGuest && idx > 0) {
-      onRequireAuth?.();
-      setShowSignupPrompt(true);
-      return;
-    }
-    setExpandedIndex((prev) => {
-      if (prev === idx) return null;
-      if (prev === null || idx <= prev) return idx;
-      return prev;
-    });
-  };
-
-  // Reset indices when campaign or sections change
-  useEffect(() => {
-    onToggle(0);
-    setQuestionIndex(0);
-  }, [campaignId, sections.length]);
+  const {
+    questions,
+    progress,
+    handleAnswer,
+    orderedSectionNumbers,
+    sectionTextByNumber,
+  } = useCampaignQuizData(activeCampaignId);
 
   useEffect(() => {
-    let cancelled = false;
-    async function loadInfo() {
-      if (!campaignId) {
-        if (!cancelled) setInfoText(null);
-        return;
-      }
-      const fb = fallbackCampaigns.find((c) => c.id === campaignId)?.infoText ?? null;
-      try {
-        const res = await listCampaigns({
-          filter: { id: { eq: campaignId } },
-          selectionSet: ['id', 'infoText'],
-        });
-        if (!cancelled) setInfoText(res.data?.[0]?.infoText ?? fb);
-      } catch {
-        if (!cancelled) setInfoText(fb);
-      }
+    if (progress && onProgress) {
+      onProgress(progress);
     }
-    loadInfo();
-    return () => {
-      cancelled = true;
-    };
-  }, [campaignId]);
+  }, [progress, onProgress]);
 
-  useEffect(() => {
-    if (!isGuest) setShowSignupPrompt(false);
-  }, [isGuest]);
-
-  const sectionsWithQuestions = sections.filter((s) => s.questions.length > 0);
-  const currentSection =
-    expandedIndex === null ? null : sectionsWithQuestions[expandedIndex];
-  const current = currentSection?.questions[questionIndex];
-  const sectionTitle = currentSection?.title;
-  const sectionText = currentSection?.text;
-
-  const answerMask = useMemo(() => {
-    const correct = current?.correctAnswer ?? '';
-    let masked = '';
-    for (let i = 0; i < correct.length; i++) {
-      const answerChar = correct[i];
-      const userChar = response[i];
-      if (answerChar === ' ') {
-        masked += '  ';
-      } else {
-        masked += userChar && userChar !== ' ' ? userChar : '_';
-        if (i < correct.length - 1 && correct[i + 1] !== ' ') {
-          masked += ' ';
-        }
-      }
+  const groupedBySection = useMemo(() => {
+    const map = new Map<number, typeof questions>();
+    for (const q of questions) {
+      const list = map.get(q.section) ?? [];
+      map.set(q.section, [...list, q]);
     }
-    return masked;
-  }, [current?.correctAnswer, response]);
+    return map;
+  }, [questions]);
 
-  if (!campaignId) return <div>Select a campaign to begin.</div>;
-  if (loading) return <Skeleton height="200px" />;
-  if (error) return <div>Error loading campaign: {error.message}</div>;
-  if (!sectionsWithQuestions.length)
-    return <div>No questions found for this campaign.</div>;
-  if (expandedIndex !== null && expandedIndex >= sectionsWithQuestions.length)
-    return <div>Campaign complete, {profile?.displayName ?? 'Friend'}!</div>;
-  if (expandedIndex === null)
-    return <div>Select a section to begin.</div>;
-  if (!currentSection || !current)
-    return <div>Question unavailable.</div>;
+  const safeProgress = progress ?? createEmptyProgress();
 
-  const handleResponseChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    const max = current.correctAnswer?.length;
-    setResponse(max ? val.slice(0, max) : val);
-  };
-
-  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (isGuest && currentSection.number !== 1) {
-      onRequireAuth?.();
-      setShowSignupPrompt(true);
-      return;
-    }
-    const userAnswer = response.trim();
-    const isCorrect =
-      userAnswer.toLowerCase() ===
-      current.correctAnswer?.trim().toLowerCase();
-
-    setAnswerState(isCorrect ? 'correct' : 'incorrect');
-
-    await handleAnswer?.({
-      questionId: current.id,
-      userAnswer,
-      isCorrect,
-      xp: current.xpValue ?? undefined,
-      sectionId: currentSection.id,
-    });
-
-    if (isCorrect) {
-      const answered = new Set(answeredQuestions);
-      answered.add(current.id);
-
-      const sectionQs = currentSection.questions;
-      const allAnswered = sectionQs.every((q) => answered.has(q.id));
-
-      if (allAnswered) {
-        markSectionComplete?.(currentSection.number, currentSection.id);
-
-        const completed = new Set(completedSections);
-        completed.add(currentSection.number);
-
-        if (
-          sectionsWithQuestions.every((s) => completed.has(s.number))
-        ) {
-          markCampaignComplete?.(campaignId);
-        }
-      }
-
-      setFeedback('Correct!');
-      const isLastQuestion =
-        questionIndex + 1 >= currentSection.questions.length;
-      setTimeout(() => {
-        setFeedback(null);
-        setResponse('');
-        setAnswerState('idle');
-        if (!isLastQuestion) {
-          setQuestionIndex((prev) => prev + 1);
-        } else {
-          if (isGuest && currentSection.number === 1) {
-            onRequireAuth?.();
-            setShowSignupPrompt(true);
-            setQuestionIndex(0);
-          } else {
-            setExpandedIndex((s) => (s === null ? 0 : s + 1));
-            setQuestionIndex(0);
-          }
-        }
-      }, 1000);
-    } else {
-      setFeedback('Try again');
-      setTimeout(() => setAnswerState('idle'), 600);
-    }
-  };
+  if (!activeCampaignId) {
+    return (
+      <div style={{ marginBottom: 16, textAlign: 'center' }}>
+        <Heading level={2}>Hey {displayName ?? 'Friend'}! Let&apos;s jump in.</Heading>
+        <Text fontSize="1rem" style={{ marginTop: 8, color: '#444' }}>
+          Discover a world of learning and adventure as you hone your treasure hunting skills.
+        </Text>
+        <img
+          src="/adventure_is_out_there.png"
+          alt="Adventure is out there"
+          style={{ marginTop: 24, width: '85%', maxWidth: 600, height: 'auto' }}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div data-campaign-id={campaignId ?? ''} data-user-id={userId}>
-      {infoText && <p>{infoText}</p>}
-      {showSignupPrompt && (
-        <p className="signup-prompt">Create an account to continue.</p>
-      )}
-      <SectionAccordion
-        title={sectionTitle ?? ''}
-        sectionId={currentSection.id}
-        completed={completedSections.includes(currentSection.number)}
-      >
-        {sectionText && (
-          <ReactMarkdown
-            className="current-section-text markdown"
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw, [rehypeSanitize, markdownSanitizeSchema]]}
-          >
-            {sectionText}
-          </ReactMarkdown>
-        )}
+    <>
+      {orderedSectionNumbers.map((sectionNum, idx) => {
+        const questionsInSection = groupedBySection.get(sectionNum) ?? [];
+        const isLocked =
+          !safeProgress.completedSections.includes(sectionNum) &&
+          sectionNum !== orderedSectionNumbers[0] &&
+          !safeProgress.completedSections.includes(orderedSectionNumbers[idx - 1]);
 
-        <div className="question-item">
-          <p>{current.text}</p>
-          <form onSubmit={onSubmit}>
-            <div className="answer-mask">
-              <input
-                type="text"
-                value={response}
-                onChange={handleResponseChange}
-                maxLength={current.correctAnswer?.length}
-                spellCheck={false}
-              />
-              <div className="mask">{answerMask}</div>
-            </div>
-            <button
-              type="submit"
-              className={`submit-btn ${answerState}`}
-              disabled={answerState === 'correct'}
-            >
-              {answerState === 'correct' ? 'Correct' : 'Submit'}
-            </button>
-          </form>
-          {feedback && <p className="answer-feedback">{feedback}</p>}
-        </div>
-      </SectionAccordion>
-    </div>
+        return (
+          <QuizSection
+            key={`sec-${sectionNum}`}
+            title={`Section ${sectionNum}`}
+            educationalText={sectionTextByNumber.get(sectionNum) ?? ''}
+            questions={questionsInSection}
+            progress={safeProgress}
+            handleAnswer={handleAnswer}
+            isLocked={isLocked}
+            initialOpen={idx === 0}
+          />
+        );
+      })}
+    </>
   );
 }
-
-
-
-
