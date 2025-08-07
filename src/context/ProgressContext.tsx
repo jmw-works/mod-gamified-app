@@ -74,8 +74,8 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   const [completedCampaigns, setCompletedCampaigns] = useState<string[]>([]);
   const [answeredQuestions, setAnsweredQuestions] = useState<string[]>([]);
   const [lastBlazeAt, setLastBlazeAt] = useState<string | null>(null);
-  const [progressId, setProgressId] = useState<string | null>(null);
   const [titles, setTitles] = useState<Schema['Title']['type'][]>([]);
+  const [progressId, setProgressId] = useState<string | null>(null);
 
   const listeners = useRef(new Set<ProgressEventListener>());
 
@@ -350,19 +350,182 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
 }
 
 export function GuestProgressProvider({ children }: { children: ReactNode }) {
+  const [xp, setXP] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [completedSections, setCompletedSections] = useState<number[]>([]);
+  const [completedCampaigns, setCompletedCampaigns] = useState<string[]>([]);
+  const [answeredQuestions, setAnsweredQuestions] = useState<string[]>([]);
+  const [lastBlazeAt, setLastBlazeAt] = useState<string | null>(null);
+  const [titles, setTitles] = useState<Schema['Title']['type'][]>([]);
+
+  const listeners = useRef(new Set<ProgressEventListener>());
+
+  const emit = useCallback((event: ProgressEvent) => {
+    listeners.current.forEach((fn) => fn(event));
+  }, []);
+
+  const subscribe = useCallback((fn: ProgressEventListener) => {
+    listeners.current.add(fn);
+    return () => listeners.current.delete(fn);
+  }, []);
+
+  const STORAGE_KEY = 'guestProgress';
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setXP(typeof parsed.xp === 'number' ? parsed.xp : 0);
+        setStreak(typeof parsed.streak === 'number' ? parsed.streak : 0);
+        setCompletedSections(
+          Array.isArray(parsed.completedSections)
+            ? parsed.completedSections.filter((n: unknown): n is number => typeof n === 'number')
+            : []
+        );
+        setCompletedCampaigns(
+          Array.isArray(parsed.completedCampaigns)
+            ? parsed.completedCampaigns.filter((s: unknown): s is string => typeof s === 'string')
+            : []
+        );
+        setAnsweredQuestions(
+          Array.isArray(parsed.answeredQuestions)
+            ? parsed.answeredQuestions.filter((s: unknown): s is string => typeof s === 'string')
+            : []
+        );
+        setLastBlazeAt(typeof parsed.lastBlazeAt === 'string' ? parsed.lastBlazeAt : null);
+      }
+    } catch (e) {
+      console.warn('Failed to load guest progress', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTitles() {
+      try {
+        const res = await listTitles({ selectionSet: ['name', 'minLevel'] });
+        if (!cancelled) setTitles(res.data ?? []);
+      } catch (e) {
+        console.warn('Failed to load titles', e);
+      }
+    }
+    loadTitles();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const data = {
+      xp,
+      streak,
+      completedSections,
+      completedCampaigns,
+      answeredQuestions,
+      lastBlazeAt,
+    };
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn('Failed to persist guest progress', e);
+    }
+  }, [xp, streak, completedSections, completedCampaigns, answeredQuestions, lastBlazeAt]);
+
+  const awardXP = useCallback(
+    (amount: number) => {
+      const now = new Date();
+      const todayStart = startOfDay(now);
+      const last = lastBlazeAt ? new Date(lastBlazeAt) : null;
+      let newStreak = streak;
+      if (!last) newStreak = 1;
+      else {
+        const lastStart = startOfDay(last);
+        const diff = Math.floor((todayStart.getTime() - lastStart.getTime()) / 86400000);
+        if (diff === 1) newStreak = Math.max(1, newStreak) + 1;
+        else if (diff > 1) newStreak = 1;
+        else newStreak = Math.max(1, newStreak);
+      }
+      const newLast = now.toISOString();
+      setStreak(newStreak);
+      setLastBlazeAt(newLast);
+
+      setXP((prev) => {
+        const newXP = prev + amount;
+        const prevLevel = getLevelFromXP(prev, XP_PER_LEVEL);
+        const newLevel = getLevelFromXP(newXP, XP_PER_LEVEL);
+        if (newLevel > prevLevel) emit({ type: 'level', level: newLevel, xp: amount });
+        return newXP;
+      });
+    },
+    [lastBlazeAt, streak, emit]
+  );
+
+  const markSectionComplete = useCallback(
+    async (section: number, sectionId?: string) => {
+      void sectionId;
+      setCompletedSections((prev) => {
+        if (prev.includes(section)) return prev;
+        emit({ type: 'section', xp: XP_FOR_SECTION });
+        awardXP(XP_FOR_SECTION);
+        return [...prev, section];
+      });
+    },
+    [emit, awardXP]
+  );
+
+  const markCampaignComplete = useCallback(
+    async (campaignId: string) => {
+      setCompletedCampaigns((prev) => {
+        if (prev.includes(campaignId)) return prev;
+        emit({ type: 'campaign', xp: XP_FOR_CAMPAIGN });
+        awardXP(XP_FOR_CAMPAIGN);
+        window.dispatchEvent(new Event('campaignProgressChanged'));
+        return [...prev, campaignId];
+      });
+    },
+    [emit, awardXP]
+  );
+
+  const handleAnswer: HandleAnswer = useCallback(
+    async ({ questionId, isCorrect, xp: earnedXP = 0 }) => {
+      setAnsweredQuestions((prev) => {
+        if (isCorrect && !prev.includes(questionId)) {
+          awardXP(earnedXP);
+          return [...prev, questionId];
+        }
+        return prev;
+      });
+    },
+    [awardXP]
+  );
+
+  const level = useMemo(() => getLevelFromXP(xp, XP_PER_LEVEL), [xp]);
+  const title = useMemo(() => {
+    if (!titles.length) return '';
+    let current: Schema['Title']['type'] | null = null;
+    for (const t of titles) {
+      const min = t.minLevel ?? 0;
+      if (level >= min && (!current || min > (current.minLevel ?? 0))) {
+        current = t;
+      }
+    }
+    return current?.name ?? '';
+  }, [titles, level]);
+
   const value: ProgressContextValue = {
-    xp: 0,
-    level: 0,
-    streak: 0,
-    completedSections: [],
-    completedCampaigns: [],
-    answeredQuestions: [],
-    title: '',
-    awardXP: () => {},
-    markSectionComplete: async () => {},
-    markCampaignComplete: async () => {},
-    handleAnswer: async () => {},
-    subscribe: () => () => {},
+    xp,
+    level,
+    streak,
+    completedSections,
+    completedCampaigns,
+    answeredQuestions,
+    title,
+    awardXP,
+    markSectionComplete,
+    markCampaignComplete,
+    handleAnswer,
+    subscribe,
   };
 
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;
