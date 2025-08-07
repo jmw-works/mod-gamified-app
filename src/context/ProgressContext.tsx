@@ -19,6 +19,7 @@ import {
   listSectionProgress,
   createSectionProgress,
   updateSectionProgress,
+  createUserResponse,
 } from '../services/progressService';
 import type { Schema } from '../../amplify/data/resource';
 import { getLevelFromXP } from '../utils/xp';
@@ -216,30 +217,89 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
   );
 
   const markQuestionAnswered = useCallback(
-    (questionId: string) => {
-      setAnsweredQuestions((prev) => {
-        if (prev.includes(questionId)) return prev;
-        const updated = [...prev, questionId];
-        if (progressId) {
-          updateUserProgress({
-            id: progressId,
-            answeredQuestions: updated,
-          }).catch((e) => console.warn('Failed to persist answer', e));
-        }
-        return updated;
-      });
+    (questionId: string, sectionId?: string, isCorrect?: boolean) => {
+      if (isCorrect) {
+        setAnsweredQuestions((prev) => {
+          if (prev.includes(questionId)) return prev;
+          const updated = [...prev, questionId];
+          if (progressId) {
+            updateUserProgress({
+              id: progressId,
+              answeredQuestions: updated,
+            }).catch((e) => console.warn('Failed to persist answer', e));
+          }
+          return updated;
+        });
+      }
+
+      if (sectionId) {
+        (async () => {
+          try {
+            const res = await listSectionProgress({
+              filter: {
+                and: [
+                  { userId: { eq: userId } },
+                  { sectionId: { eq: sectionId } },
+                ],
+              },
+              selectionSet: ['id', 'answeredQuestionIds', 'correctCount'],
+            });
+            const row = res.data?.[0];
+            const answered = row?.answeredQuestionIds ?? [];
+            const updatedAnswered = answered.includes(questionId)
+              ? answered
+              : [...answered, questionId];
+            const newCount = (row?.correctCount ?? 0) + (isCorrect ? 1 : 0);
+            if (row) {
+              await updateSectionProgress({
+                id: row.id,
+                answeredQuestionIds: updatedAnswered,
+                correctCount: newCount,
+              });
+            } else {
+              await createSectionProgress({
+                userId,
+                sectionId,
+                answeredQuestionIds: [questionId],
+                correctCount: isCorrect ? 1 : 0,
+                completed: false,
+              });
+            }
+          } catch (e) {
+            console.warn('Failed to persist question progress', e);
+          }
+        })();
+      }
     },
-    [progressId]
+    [progressId, userId]
   );
 
   const handleAnswer: HandleAnswer = useCallback(
-    ({ questionId, isCorrect, xp = 0 }: SubmitArgs) => {
+    async ({
+      questionId,
+      isCorrect,
+      xp = 0,
+      responseText = '',
+      sectionId,
+    }: SubmitArgs) => {
+      try {
+        await createUserResponse({
+          userId,
+          questionId,
+          responseText,
+          isCorrect,
+        });
+      } catch (e) {
+        console.warn('Failed to persist user response', e);
+      }
+
+      markQuestionAnswered(questionId, sectionId, isCorrect);
+
       if (!isCorrect) return;
       const alreadyAnswered = answeredQuestions.includes(questionId);
       if (!alreadyAnswered) awardXP(xp);
-      markQuestionAnswered(questionId);
     },
-    [answeredQuestions, awardXP, markQuestionAnswered]
+    [answeredQuestions, awardXP, markQuestionAnswered, userId]
   );
 
   const markCampaignComplete = useCallback(

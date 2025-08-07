@@ -56,6 +56,8 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
       questionId: current.id,
       isCorrect,
       xp: current.xpValue ?? undefined,
+      responseText: ans?.content,
+      sectionId: sectionIdByNumber.get(current.section),
     });
 
     if (isCorrect) {
