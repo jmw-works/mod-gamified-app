@@ -14,17 +14,11 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
   const { activeCampaignId: campaignId } = useActiveCampaign();
   const { authStatus } = useAuthenticator((ctx) => [ctx.authStatus]);
 
-  const {
-    questions,
-    handleAnswer,
-    sectionTextByNumber,
-    loading,
-    error,
-    sectionIdByNumber,
-  } = useCampaignQuizData(userId, campaignId);
+  const { questions, sectionTextByNumber, loading, error, sectionIdByNumber } =
+    useCampaignQuizData(campaignId);
 
   const {
-    awardXP,
+    handleAnswer,
     markSectionComplete,
     markCampaignComplete,
     answeredQuestions,
@@ -58,14 +52,13 @@ export default function CampaignCanvas({ userId, onRequireAuth }: CampaignCanvas
     const ans = current.answers.find((a) => a.id === answerId);
     const isCorrect = !!ans?.isCorrect;
 
-    await handleAnswer({ questionId: current.id, isCorrect, xp: current.xpValue ?? undefined });
+    await handleAnswer({
+      questionId: current.id,
+      isCorrect,
+      xp: current.xpValue ?? undefined,
+    });
 
     if (isCorrect) {
-      const alreadyAnswered = answeredQuestions.includes(current.id);
-      if (!alreadyAnswered) {
-        awardXP(current.xpValue ?? 0);
-      }
-
       const answered = new Set(answeredQuestions);
       answered.add(current.id);
 

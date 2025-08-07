@@ -1,13 +1,8 @@
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type {
-  Question as QuestionUI,
-  HandleAnswer,
-  SubmitArgs,
-} from '../types/QuestionTypes';
+import { useEffect, useRef, useState } from 'react';
+import type { Question as QuestionUI } from '../types/QuestionTypes';
 import { listSections } from '../services/sectionService';
 import { listQuestions } from '../services/questionService';
-import { useProgress } from '../context/ProgressContext';
 function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
   if (ids.length === 0) return undefined;
   if (ids.length === 1) return { [fieldName]: { eq: ids[0] } } as Record<string, unknown>;
@@ -16,14 +11,13 @@ function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
   } as Record<string, unknown>;
 }
 
-export function useCampaignQuizData(userId: string, activeCampaignId?: string | null) {
+export function useCampaignQuizData(activeCampaignId?: string | null) {
   const [questions, setQuestions] = useState<QuestionUI[]>([]);
   const [orderedSectionNumbers, setOrderedSectionNumbers] = useState<number[]>([]);
   const [sectionIdByNumber, setSectionIdByNumber] = useState<Map<number, string>>(new Map());
   const [sectionTextByNumber, setSectionTextByNumber] = useState<Map<number, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<Error | null>(null);
-  const { markQuestionAnswered } = useProgress();
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -126,23 +120,12 @@ export function useCampaignQuizData(userId: string, activeCampaignId?: string | 
     return () => {
       cancelled = true;
     };
-  }, [activeCampaignId, userId]);
-
-
-  const handleAnswer: HandleAnswer = useCallback(
-    async ({ questionId, isCorrect }: SubmitArgs) => {
-      if (!userId || !isCorrect) return;
-
-      markQuestionAnswered(questionId);
-    },
-    [userId, markQuestionAnswered]
-  );
+  }, [activeCampaignId]);
 
   return {
     questions,
     loading,
     error,
-    handleAnswer,
     orderedSectionNumbers,
     sectionTextByNumber,
     sectionIdByNumber,
