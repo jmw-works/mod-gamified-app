@@ -1,5 +1,6 @@
 /* eslint react-refresh/only-export-components: off */
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { XP_PER_LEVEL, getLevelFromXP } from '../utils/xp';
 
 interface ProgressContextValue {
   xp: number;
@@ -22,8 +23,6 @@ interface ProviderProps {
   children: ReactNode;
 }
 
-const XP_PER_LEVEL = 100;
-
 export function ProgressProvider({
   initialXP = 0,
   initialStreak = 0,
@@ -42,7 +41,7 @@ export function ProgressProvider({
   useEffect(() => setCompletedSections(initialCompletedSections), [initialCompletedSections]);
   useEffect(() => setCompletedCampaigns(initialCompletedCampaigns), [initialCompletedCampaigns]);
 
-  const level = useMemo(() => Math.floor(xp / XP_PER_LEVEL) + 1, [xp]);
+  const level = useMemo(() => getLevelFromXP(xp, XP_PER_LEVEL), [xp]);
 
   const awardXP = (amount: number) => setXP((prev) => prev + amount);
   const markSectionComplete = (section: number) =>
