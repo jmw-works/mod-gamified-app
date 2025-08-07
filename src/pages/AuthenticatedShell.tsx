@@ -54,7 +54,7 @@ export default function AuthenticatedShell() {
   );
 
   return (
-    <ProgressProvider initialXP={profile?.experience ?? 0}>
+    <ProgressProvider userId={userId}>
       <div style={gridStyle}>
         <div style={{ gridArea: 'header' }}>
           <HeaderBar ref={headerRef} signOut={signOut} />
