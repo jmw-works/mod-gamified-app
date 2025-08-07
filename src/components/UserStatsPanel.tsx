@@ -1,6 +1,16 @@
 // src/components/UserStatsPanel.tsx
-import { Flex, Heading, Text, View, useTheme, Divider, Badge } from '@aws-amplify/ui-react';
+import {
+  Flex,
+  Heading,
+  Text,
+  View,
+  useTheme,
+  Divider,
+  Badge,
+  useAuthenticator,
+} from '@aws-amplify/ui-react';
 import { useProgress } from '../context/ProgressContext';
+import { useUserProfile } from '../context/UserProfileContext';
 import {
   XP_PER_LEVEL,
   getXPWithinLevel,
@@ -8,17 +18,7 @@ import {
   getXPToNextLevel,
 } from '../utils/xp';
 
-interface UserAttributes {
-  name?: string;
-  email?: string;
-  [key: string]: unknown;
-}
-
 interface UserStatsPanelProps {
-  user: {
-    username?: string;
-    attributes: UserAttributes;
-  };
   headerHeight: number;
   spacing: number;
 }
@@ -100,18 +100,27 @@ function getRankForLevel(level: number): { title: string; notes: string; tier: n
   return { tier: 1, title: 'Novice Relic Seeker', notes: 'First login/first XP gain' };
 }
 
-export default function UserStatsPanel({ user, headerHeight, spacing }: UserStatsPanelProps) {
+export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanelProps) {
   const { tokens } = useTheme();
   const { xp, level } = useProgress();
+  const { profile } = useUserProfile();
+  const { user } = useAuthenticator((ctx) => [ctx.user]);
 
   // Defensive defaults
   const safeXP = Number.isFinite(xp) ? Math.max(0, xp) : 0;
 
   // Prefer saved display name; fall back to username/email
+  const loginId = user?.signInDetails?.loginId;
+
   const shownName =
-    (typeof user.attributes?.name === 'string' && user.attributes.name) ||
-    user.username ||
-    (typeof user.attributes?.email === 'string' ? user.attributes.email : '') ||
+    (typeof profile?.displayName === 'string' && profile.displayName) ||
+    user?.username ||
+    loginId ||
+    'N/A';
+
+  const email =
+    (typeof profile?.email === 'string' && profile.email) ||
+    loginId ||
     'N/A';
 
   // Per-level math
@@ -187,7 +196,7 @@ export default function UserStatsPanel({ user, headerHeight, spacing }: UserStat
       <Divider marginTop="small" marginBottom="small" />
 
       <Text color={tokens.colors.font.secondary} fontSize="0.9rem">
-        Email: {typeof user.attributes?.email === 'string' ? user.attributes.email : 'N/A'}
+        Email: {email}
       </Text>
     </View>
   );

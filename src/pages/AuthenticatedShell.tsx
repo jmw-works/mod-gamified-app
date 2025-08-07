@@ -9,10 +9,12 @@ import CampaignGallery from '../components/CampaignGallery';
 import CampaignCanvas from '../components/CampaignCanvas';
 import UserStatsPanel from '../components/UserStatsPanel';
 
-import { useUserProfile } from '../hooks/useUserProfile';
+import { useCampaigns } from '../hooks/useCampaigns';
+import { useUserProfile } from '../context/UserProfileContext';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import { ProgressProvider } from '../context/ProgressContext';
 import { ActiveCampaignProvider } from '../context/ActiveCampaignContext';
+import { UserProfileProvider } from '../context/UserProfileContext';
 
 export default function AuthenticatedShell() {
   const { user, signOut, authStatus } = useAuthenticator((ctx) => [ctx.user, ctx.authStatus]);
@@ -34,7 +36,7 @@ export default function AuthenticatedShell() {
   }, [authStatus]);
 
   const emailFromAttrs = attrs?.email ?? null;
-  const { profile } = useUserProfile(userId, emailFromAttrs);
+  const { campaigns, loading: campaignsLoading } = useCampaigns(userId);
 
   const headerRef = useRef<HTMLDivElement>(null);
   const headerHeight = useHeaderHeight(headerRef);
@@ -53,41 +55,67 @@ export default function AuthenticatedShell() {
   );
 
   return (
-    <ActiveCampaignProvider>
-      <ProgressProvider userId={userId}>
-        <div style={gridStyle}>
-          <div style={{ gridArea: 'header' }}>
-            <HeaderBar ref={headerRef} signOut={signOut} />
-          </div>
+    <UserProfileProvider userId={userId} email={emailFromAttrs}>
+      <ActiveCampaignProvider>
+        <ProgressProvider userId={userId}>
+          <div style={gridStyle}>
+            <div style={{ gridArea: 'header' }}>
+              <HeaderBar ref={headerRef} signOut={signOut} />
+            </div>
 
-          <div style={{ gridArea: 'banner' }}>
-            <AnnouncementBanner />
-          </div>
+            <div style={{ gridArea: 'banner' }}>
+              <AnnouncementBanner />
+            </div>
 
-          <div style={{ gridArea: 'gallery' }}>
-            <CampaignGallery />
-          </div>
+            <div style={{ gridArea: 'gallery' }}>
+              <CampaignGallery campaigns={campaigns} loading={campaignsLoading} />
+            </div>
 
-          <div style={{ gridArea: 'canvas' }}>
-            <CampaignCanvas userId={userId} displayName={profile?.displayName ?? 'Friend'} />
-          </div>
+            <div style={{ gridArea: 'canvas' }}>
+              <CampaignCanvas userId={userId} />
+            </div>
 
-          <div style={{ gridArea: 'stats' }}>
-            <UserStatsPanel
-              user={{
-                username: user?.username,
-                attributes: {
-                  name: profile?.displayName ?? '',
-                  email: emailFromAttrs ?? undefined,
-                },
-              }}
-              headerHeight={headerHeight}
-              spacing={spacing}
-            />
+            <div style={{ gridArea: 'stats' }}>
+              <UserStatsPanelWithProfile
+                username={user?.username}
+                email={emailFromAttrs ?? undefined}
+                headerHeight={headerHeight}
+                spacing={spacing}
+              />
+            </div>
           </div>
-        </div>
-      </ProgressProvider>
-    </ActiveCampaignProvider>
+        </ProgressProvider>
+      </ActiveCampaignProvider>
+    </UserProfileProvider>
+  );
+}
+
+// Helper component to use profile inside stats panel
+function UserStatsPanelWithProfile({
+  username,
+  email,
+  headerHeight,
+  spacing,
+}: {
+  username?: string;
+  email?: string;
+  headerHeight: number;
+  spacing: number;
+}) {
+  const { profile } = useUserProfile();
+
+  return (
+    <UserStatsPanel
+      user={{
+        username,
+        attributes: {
+          name: profile?.displayName ?? '',
+          email,
+        },
+      }}
+      headerHeight={headerHeight}
+      spacing={spacing}
+    />
   );
 }
 

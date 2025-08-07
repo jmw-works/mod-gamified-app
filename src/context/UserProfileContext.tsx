@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+/* eslint react-refresh/only-export-components: off */
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+import type { ReactNode } from 'react';
 import type { Schema } from '../../amplify/data/resource';
 import {
   listUserProfiles,
@@ -8,43 +16,49 @@ import {
 
 type UserProfileModel = Schema['UserProfile']['type'];
 
-export function useUserProfile(userId?: string, email?: string | null) {
+interface UserProfileContextValue {
+  profile: UserProfileModel | null;
+  updateDisplayName: (displayName: string) => Promise<void>;
+}
+
+const UserProfileContext =
+  createContext<UserProfileContextValue | undefined>(undefined);
+
+interface ProviderProps {
+  userId: string;
+  email?: string | null;
+  children: ReactNode;
+}
+
+export function UserProfileProvider({
+  userId,
+  email,
+  children,
+}: ProviderProps) {
   const [profile, setProfile] = useState<UserProfileModel | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
 
-  const hasIdentity = Boolean(userId);
-
+  // Load profile for current user
   useEffect(() => {
-    if (!hasIdentity) return;
     let cancelled = false;
-
     (async () => {
-      setLoading(true);
-      setError(null);
       try {
         const res = await listUserProfiles({
-          filter: { userId: { eq: userId! } },
+          filter: { userId: { eq: userId } },
         });
         const first = (res?.data ?? [])[0] ?? null;
         if (!cancelled) setProfile(first);
       } catch (e) {
-        if (!cancelled) setError(e as Error);
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) console.warn('Failed to load profile', e);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [hasIdentity, userId]);
+  }, [userId]);
 
   const updateDisplayName = useCallback(
     async (displayName: string) => {
-      if (!hasIdentity) return;
-      setLoading(true);
-      setError(null);
       try {
         if (profile?.id) {
           const updated = await updateUserProfile({
@@ -58,7 +72,7 @@ export function useUserProfile(userId?: string, email?: string | null) {
           setProfile(updatedProfile);
         } else {
           const created = await createUserProfile({
-            userId: userId!,
+            userId,
             email: email ?? null,
             displayName,
           });
@@ -69,16 +83,27 @@ export function useUserProfile(userId?: string, email?: string | null) {
           setProfile(createdProfile);
         }
       } catch (e) {
-        setError(e as Error);
-      } finally {
-        setLoading(false);
+        console.warn('Failed to update profile', e);
       }
     },
-    [profile, hasIdentity, userId, email]
+    [profile, userId, email]
   );
 
-  return useMemo(
-    () => ({ profile, loading, error, updateDisplayName }),
-    [profile, loading, error, updateDisplayName]
+  const value: UserProfileContextValue = { profile, updateDisplayName };
+
+  return (
+    <UserProfileContext.Provider value={value}>
+      {children}
+    </UserProfileContext.Provider>
   );
 }
+
+export function useUserProfile() {
+  const ctx = useContext(UserProfileContext);
+  if (!ctx)
+    throw new Error('useUserProfile must be used within UserProfileProvider');
+  return ctx;
+}
+
+export default UserProfileContext;
+
