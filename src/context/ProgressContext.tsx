@@ -275,7 +275,7 @@ export function ProgressProvider({ userId, children }: ProviderProps) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, emit]);
 
   useEffect(() => {
     let cancelled = false;
