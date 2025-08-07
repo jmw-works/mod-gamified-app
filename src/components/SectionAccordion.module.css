@@ -1,0 +1,27 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--color-bg-dark, #333);
+  color: var(--color-text-inverse, #fff);
+  cursor: pointer;
+}
+
+.arrow {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #fff;
+  transition: transform 0.2s ease-in-out;
+}
+
+.expanded .arrow {
+  transform: rotate(180deg);
+}
+
+.locked {
+  opacity: 0.5;
+  pointer-events: none;
+}
