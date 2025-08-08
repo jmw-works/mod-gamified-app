@@ -48,7 +48,7 @@ export function useCampaigns(userId?: string | null) {
       const cRes = await listCampaigns({
         filter: { isActive: { eq: true } },
         selectionSet: ['id', 'title', 'description', 'thumbnailUrl', 'order', 'isActive', 'infoText'],
-        authMode: 'identityPool',
+        authMode: userId ? 'identityPool' : 'apiKey', // TODO: re-enable auth gating
       });
 
       let raw: CampaignRow[] = (cRes.data ?? [])
