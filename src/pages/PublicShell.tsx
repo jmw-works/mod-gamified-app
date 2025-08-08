@@ -13,7 +13,8 @@ interface PublicShellProps {
   onRequireAuth: () => void;
 }
 
-export default function PublicShell({ onRequireAuth }: PublicShellProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function PublicShell(_props: PublicShellProps) {
   return (
     <ActiveCampaignProvider>
       <GuestProgressProvider>
@@ -31,7 +32,8 @@ export default function PublicShell({ onRequireAuth }: PublicShellProps) {
           </div>
           <div className={styles.canvasArea}>
             <Suspense fallback={<Skeleton height="200px" />}>
-              <CampaignCanvas onRequireAuth={onRequireAuth} publicMode />
+              {/* TODO: re-enable auth gating */}
+              <CampaignCanvas publicMode />
             </Suspense>
           </div>
         </div>

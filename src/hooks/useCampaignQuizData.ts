@@ -91,7 +91,7 @@ export function useCampaignQuizData(
       };
 
       try {
-        if (!publicMode) await ensureSeedData();
+        await ensureSeedData(); // TODO: re-enable auth gating
 
         const sRes = await listSections({
           filter: { campaignId: { eq: campaignId } },
@@ -104,7 +104,7 @@ export function useCampaignQuizData(
             'title',
             'isActive',
           ],
-          authMode: 'identityPool',
+          authMode: publicMode ? 'apiKey' : 'identityPool', // TODO: re-enable auth gating
         });
 
         const rawSections = (sRes.data ?? [])
@@ -178,7 +178,7 @@ export function useCampaignQuizData(
             'hint',
             'explanation',
           ],
-          authMode: 'identityPool',
+          authMode: publicMode ? 'apiKey' : 'identityPool', // TODO: re-enable auth gating
         });
 
         type QuestionRow = {

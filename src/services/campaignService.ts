@@ -23,7 +23,7 @@ export async function listCampaigns(
 ) {
   try {
     return await client.models.Campaign.list({
-      authMode: 'identityPool',
+      authMode: 'apiKey', // TODO: re-enable auth gating
       ...withInfoTextSelection(options),
     });
   } catch (err) {
