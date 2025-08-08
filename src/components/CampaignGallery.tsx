@@ -2,7 +2,6 @@
 import { memo, useContext, useEffect, useRef } from 'react';
 import { FaChevronLeft, FaChevronRight, FaLock } from 'react-icons/fa';
 import styles from './CampaignGallery.module.css';
-import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import { useCampaigns, type UICampaign } from '../hooks/useCampaigns';
 import { useCampaignThumbnail } from '../hooks/useCampaignThumbnail';
@@ -10,6 +9,7 @@ import ProgressContext from '../context/ProgressContext';
 import Skeleton from './Skeleton';
 import ProgressBar from './ProgressBar';
 import { useCampaignProgress } from '../hooks/useCampaignProgress';
+import { useUserProfile } from '../context/UserProfileContext';
 
 
 // Optional thumbnail props for campaigns
@@ -79,8 +79,8 @@ function CampaignCardView({
 }
 
 function CampaignGalleryInner() {
-  const { user } = useAuthenticator((ctx) => [ctx.user]);
-  const userId = user?.userId;
+  const { profile } = useUserProfile();
+  const userId = profile?.userId;
   const { campaigns, loading, error, refresh } = useCampaigns(userId);
   const { activeCampaignId, setActiveCampaignId } = useActiveCampaign();
   const progress = useContext(ProgressContext);

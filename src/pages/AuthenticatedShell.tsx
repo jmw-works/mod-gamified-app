@@ -1,7 +1,5 @@
 // src/pages/AuthenticatedShell.tsx
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
-import { fetchUserAttributes } from 'aws-amplify/auth';
+import { Suspense, lazy, useRef, useState } from 'react';
 
 import { Header as HeaderBar } from '../components/Header';
 import AnnouncementBanner from '../components/AnnouncementBanner';
@@ -19,25 +17,16 @@ import DisplayNamePrompt from '../components/DisplayNamePrompt';
 import './AuthenticatedShell.css';
 
 export default function AuthenticatedShell() {
-  const { user, signOut, authStatus } = useAuthenticator((ctx) => [ctx.user, ctx.authStatus]);
-  const userId = user?.userId ?? '';
+  const [userId] = useState(() => {
+    let id = localStorage.getItem('guestUserId');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('guestUserId', id);
+    }
+    return id;
+  });
 
-  const [attrs, setAttrs] = useState<Record<string, string> | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    if (authStatus !== 'authenticated') return;
-
-    fetchUserAttributes()
-      .then((a) => mounted && setAttrs((a ?? {}) as Record<string, string>))
-      .catch(() => mounted && setAttrs(null));
-
-    return () => {
-      mounted = false;
-    };
-  }, [authStatus]);
-
-  const emailFromAttrs = attrs?.email ?? null;
+  const emailFromAttrs = null;
 
   const headerRef = useRef<HTMLDivElement>(null);
   const headerHeight = useHeaderHeight(headerRef);
@@ -50,7 +39,7 @@ export default function AuthenticatedShell() {
           <DisplayNamePrompt />
           <div className="authenticated-grid">
             <div className="auth-header">
-              <HeaderBar ref={headerRef} signOut={signOut} />
+              <HeaderBar ref={headerRef} />
             </div>
 
             <div className="auth-banner">
