@@ -1,8 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import type { Question as QuestionUI, HandleAnswer } from '../types/QuestionTypes';
-import { listSections } from '../services/sectionService';
-import { listQuestions } from '../services/questionService';
-import { ensureSeedData } from '../utils/seedData';
+import { getCampaignWithSectionsAndQuestions } from '../services/contentService';
 import { fallbackSectionsByCampaign } from '../utils/fallbackContent';
 import ProgressContext from '../context/ProgressContext';
 import type { Progress } from '../types/ProgressTypes';
@@ -13,14 +11,6 @@ interface QuizSection {
   title: string;
   text: string;
   questions: QuestionUI[];
-}
-
-function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
-  if (ids.length === 0) return undefined;
-  if (ids.length === 1) return { [fieldName]: { eq: ids[0] } } as Record<string, unknown>;
-  return {
-    or: ids.map((id) => ({ [fieldName]: { eq: id } })),
-  } as Record<string, unknown>;
 }
 
 /**
@@ -91,25 +81,12 @@ export function useCampaignQuizData(
       };
 
       try {
-        await ensureSeedData(); // TODO: re-enable auth gating
+        const data = await getCampaignWithSectionsAndQuestions(
+          campaignId,
+          publicMode ? 'apiKey' : 'identityPool',
+        );
 
-        const sRes = await listSections({
-          filter: { campaignId: { eq: campaignId } },
-          selectionSet: [
-            'id',
-            'number',
-            'order',
-            'educationalText',
-            'educationalRichText',
-            'title',
-            'isActive',
-          ],
-          authMode: publicMode ? 'apiKey' : 'identityPool', // TODO: re-enable auth gating
-        });
-
-        const rawSections = (sRes.data ?? [])
-          .filter((s) => s.isActive !== false)
-          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        const rawSections = data.sections;
 
         if (publicMode && rawSections.length === 0) {
           loadFallback();
@@ -128,96 +105,42 @@ export function useCampaignQuizData(
         }
 
         const numToId = new Map<number, string>();
-        const idToNumber = new Map<string, number>();
         const textByNum = new Map<number, string>();
         const titleByNum = new Map<number, string>();
         const orderedNums: number[] = [];
         const sectionObjs: QuizSection[] = [];
-        const sectionById = new Map<string, QuizSection>();
 
         for (const s of rawSections) {
-          const n = (s.number ?? 0) as number;
+          const n = s.number;
           const section: QuizSection = {
             number: n,
             id: s.id,
-            title: s.title ?? '',
-            text: s.educationalRichText ?? s.educationalText ?? '',
-            questions: [],
+            title: s.title,
+            text: s.text,
+            questions: s.questions.map((q) => ({
+              id: q.id,
+              text: q.text,
+              section: n,
+              xpValue: q.xpValue,
+              correctAnswer: q.correctAnswer,
+              hint: q.hint,
+              explanation: q.explanation,
+            })),
           };
           sectionObjs.push(section);
-          sectionById.set(s.id, section);
           numToId.set(n, s.id);
-          idToNumber.set(s.id, n);
           textByNum.set(n, section.text);
           titleByNum.set(n, section.title);
           orderedNums.push(n);
         }
 
-        if (cancelled) return;
-        setSectionIdByNumber(numToId);
-        setSectionTextByNumber(textByNum);
-        setSectionTitleByNumber(titleByNum);
-        setOrderedSectionNumbers(orderedNums);
-
-        const sectionIds = rawSections.map((s) => s.id);
-        if (sectionIds.length === 0) {
-          if (!cancelled) setSections([]);
-          return;
+        if (!cancelled) {
+          setSectionIdByNumber(numToId);
+          setSectionTextByNumber(textByNum);
+          setSectionTitleByNumber(titleByNum);
+          setOrderedSectionNumbers(orderedNums);
+          setSections(sectionObjs);
         }
-
-        const qFilter = buildOrIdFilter('sectionId', sectionIds);
-        const qRes = await listQuestions({
-          ...(qFilter ? { filter: qFilter } : {}),
-          selectionSet: [
-            'id',
-            'text',
-            'sectionId',
-            'order',
-            'xpValue',
-            'correctAnswer',
-            'hint',
-            'explanation',
-          ],
-          authMode: publicMode ? 'apiKey' : 'identityPool', // TODO: re-enable auth gating
-        });
-
-        type QuestionRow = {
-          id: string;
-          text: string;
-          sectionId?: string | null;
-          order?: number | null;
-          xpValue?: number | null;
-          correctAnswer?: string;
-          hint?: string | null;
-          explanation?: string | null;
-        };
-
-        const bySectionId = new Map<string, QuestionRow[]>();
-        for (const q of (qRes.data ?? []) as QuestionRow[]) {
-          const sid = q.sectionId ?? '';
-          if (!bySectionId.has(sid)) bySectionId.set(sid, []);
-          bySectionId.get(sid)!.push(q);
-        }
-
-        for (const s of rawSections) {
-          const rows = bySectionId.get(s.id) ?? [];
-          rows.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-          const sectionNum = idToNumber.get(s.id) ?? 0;
-          const sectionObj = sectionById.get(s.id)!;
-          for (const row of rows) {
-            sectionObj.questions.push({
-              id: row.id,
-              text: row.text,
-              section: sectionNum,
-              xpValue: row.xpValue ?? 10,
-              correctAnswer: row.correctAnswer ?? '',
-              hint: row.hint ?? undefined,
-              explanation: row.explanation ?? undefined,
-            });
-          }
-        }
-
-        if (!cancelled) setSections(sectionObjs);
       } catch (e) {
         if (publicMode) {
           loadFallback();

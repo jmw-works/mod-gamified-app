@@ -3,82 +3,52 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 
 const schema = a.schema({
   // ------------------------------------------------------------
-  // Content hierarchy: Campaign -> Section -> Question
+  // Unified content model
   // ------------------------------------------------------------
 
-  Campaign: a
+  CampaignContent: a
     .model({
       id: a.id().required(),
-      slug: a.string().required(),
-      title: a.string().required(),
+
+      // Grouping & lookup
+      campaignSlug: a.string().required(), // e.g., "demo-campaign-1"
+      itemType: a.enum(['CAMPAIGN', 'SECTION', 'QUESTION']),
+
+      // Global campaign ordering
+      campaignOrder: a.integer().required(),
+
+      // Hierarchy hints
+      sectionNumber: a.integer(), // required for SECTION/QUESTION
+
+      // Order within level
+      itemOrder: a.integer().required(),
+
+      // CAMPAIGN fields
+      title: a.string(),
       description: a.string(),
       infoText: a.string(),
-      order: a.integer().default(0),
       isActive: a.boolean().default(true),
 
-      // Optional thumbnails
       thumbnailKey: a.string(),
       thumbnailUrl: a.string(),
       thumbnailAlt: a.string(),
 
-      sections: a.hasMany('Section', 'campaignId'),
-    })
-    .authorization((allow) => [
-      allow.guest().to(['read']),
-      allow.authenticated().to(['read']),
-      allow.group('admin').to(['create', 'update', 'delete']),
-    ]),
-
-  Section: a
-    .model({
-      id: a.id().required(),
-      campaignId: a.id().required(),
-      campaign: a.belongsTo('Campaign', 'campaignId'),
-
-      // Legacy numeric index used by UI
-      number: a.integer().required(),
-
-      title: a.string(),
+      // SECTION fields
+      sectionTitle: a.string(),
       educationalText: a.string(),
-      // New Markdown-based field for richer content
       educationalRichText: a.string(),
-      order: a.integer().default(0),
-      isActive: a.boolean().default(true),
-
-      // Optional unlock controls
+      sectionIsActive: a.boolean().default(true),
       unlockRule: a.enum(['ALL_PREV_CORRECT', 'PERCENT', 'MANUAL']),
       unlockThreshold: a.integer().default(100),
 
-      questions: a.hasMany('Question', 'sectionId'),
-    })
-    .authorization((allow) => [
-      allow.guest().to(['read']),
-      allow.authenticated().to(['read']),
-      allow.group('admin').to(['create', 'update', 'delete']),
-    ]),
-
-  Question: a
-    .model({
-      id: a.id().required(),
-
-      // Legacy field for compatibility
-      section: a.integer(),
-
-      // Relational link (preferred)
-      sectionId: a.id(),
-      sectionRef: a.belongsTo('Section', 'sectionId'),
-
-      text: a.string().required(),
+      // QUESTION fields
+      questionText: a.string(),
+      correctAnswer: a.string(),
       xpValue: a.integer().default(10),
       difficulty: a.enum(['easy', 'medium', 'hard']),
-      order: a.integer().default(0),
-      isActive: a.boolean().default(true),
-
-      correctAnswer: a.string().required(),
+      questionIsActive: a.boolean().default(true),
       hint: a.string(),
       explanation: a.string(),
-
-      responses: a.hasMany('UserResponse', 'questionId'),
     })
     .authorization((allow) => [
       allow.guest().to(['read']),
@@ -119,7 +89,7 @@ const schema = a.schema({
       id: a.id().required(),
       userId: a.string().required(),
       questionId: a.id().required(),
-      question: a.belongsTo('Question', 'questionId'),
+      question: a.belongsTo('CampaignContent', 'questionId'),
       responseText: a.string().required(),
       isCorrect: a.boolean().required(),
     })
