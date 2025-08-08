@@ -18,6 +18,11 @@
   flex-shrink: 0;
 }
 
+.text {
+  color: #ffffff;
+  font-weight: 800;
+}
+
 .textWrapper {
   display: flex;
   flex-direction: column;
