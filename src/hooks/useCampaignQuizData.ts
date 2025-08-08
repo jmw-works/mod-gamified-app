@@ -3,6 +3,7 @@ import type { Question as QuestionUI, HandleAnswer } from '../types/QuestionType
 import { listSections } from '../services/sectionService';
 import { listQuestions } from '../services/questionService';
 import { ensureSeedData } from '../utils/seedData';
+import { fallbackSectionsByCampaign } from '../utils/fallbackContent';
 import ProgressContext from '../context/ProgressContext';
 import type { Progress } from '../types/ProgressTypes';
 
@@ -22,7 +23,17 @@ function buildOrIdFilter(fieldName: 'sectionId' | 'campaignId', ids: string[]) {
   } as Record<string, unknown>;
 }
 
-export function useCampaignQuizData(activeCampaignId?: string | null) {
+/**
+ * Load questions/sections for the currently active campaign.  In public mode
+ * the hook uses unauthenticated requests against the Amplify Data API and
+ * falls back to locally bundled seed data if those requests fail.  This allows
+ * the public shell to render campaign content without requiring the user to
+ * sign in.
+ */
+export function useCampaignQuizData(
+  activeCampaignId?: string | null,
+  publicMode = false,
+) {
   const [sections, setSections] = useState<QuizSection[]>([]);
   const [orderedSectionNumbers, setOrderedSectionNumbers] = useState<number[]>([]);
   const [sectionIdByNumber, setSectionIdByNumber] = useState<Map<number, string>>(new Map());
@@ -38,8 +49,49 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
     async function loadContentForCampaign(campaignId: string) {
       setLoading(true);
       setErr(null);
+
+      // Helper used when the backend is unreachable or empty.  It converts the
+      // static fallback content into the same structures returned by the
+      // service calls.
+      const loadFallback = () => {
+        const fallbackSections = fallbackSectionsByCampaign[campaignId] ?? [];
+        const numToId = new Map<number, string>();
+        const textByNum = new Map<number, string>();
+        const titleByNum = new Map<number, string>();
+        const orderedNums: number[] = [];
+        const sectionObjs: QuizSection[] = [];
+
+        for (const s of fallbackSections) {
+          const section: QuizSection = {
+            number: s.number,
+            id: s.id,
+            title: s.title,
+            text: s.text,
+            questions: s.questions.map((q) => ({
+              id: q.id,
+              text: q.text,
+              section: q.section,
+              xpValue: q.xpValue ?? 10,
+              correctAnswer: q.correctAnswer,
+            })),
+          };
+          sectionObjs.push(section);
+          numToId.set(s.number, s.id);
+          textByNum.set(s.number, s.text);
+          titleByNum.set(s.number, s.title);
+          orderedNums.push(s.number);
+        }
+
+        setSectionIdByNumber(numToId);
+        setSectionTextByNumber(textByNum);
+        setSectionTitleByNumber(titleByNum);
+        setOrderedSectionNumbers(orderedNums);
+        setSections(sectionObjs);
+        setLoading(false);
+      };
+
       try {
-        await ensureSeedData();
+        if (!publicMode) await ensureSeedData();
 
         const sRes = await listSections({
           filter: { campaignId: { eq: campaignId } },
@@ -58,6 +110,11 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
         const rawSections = (sRes.data ?? [])
           .filter((s) => s.isActive !== false)
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+        if (publicMode && rawSections.length === 0) {
+          loadFallback();
+          return;
+        }
 
         if (rawSections.length === 0) {
           if (!cancelled) {
@@ -162,7 +219,11 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
 
         if (!cancelled) setSections(sectionObjs);
       } catch (e) {
-        if (!cancelled) setErr(e as Error);
+        if (publicMode) {
+          loadFallback();
+        } else if (!cancelled) {
+          setErr(e as Error);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -182,7 +243,7 @@ export function useCampaignQuizData(activeCampaignId?: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [activeCampaignId]);
+  }, [activeCampaignId, publicMode]);
 
   const questions: QuestionUI[] = sections.flatMap((s) => s.questions);
   const handleAnswer: HandleAnswer | undefined = progress?.handleAnswer;

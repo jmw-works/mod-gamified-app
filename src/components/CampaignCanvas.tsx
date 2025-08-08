@@ -11,9 +11,16 @@ interface Props {
   displayName?: string;
   onProgress?: (p: Progress) => void;
   onRequireAuth?: () => void;
+  /** When true, data is loaded using unauthenticated (public) access. */
+  publicMode?: boolean;
 }
 
-export default function CampaignCanvas({ displayName, onProgress, onRequireAuth }: Props) {
+export default function CampaignCanvas({
+  displayName,
+  onProgress,
+  onRequireAuth,
+  publicMode = false,
+}: Props) {
   const { activeCampaignId } = useActiveCampaign();
 
   const {
@@ -24,7 +31,7 @@ export default function CampaignCanvas({ displayName, onProgress, onRequireAuth 
     sectionTextByNumber,
     sectionTitleByNumber,
     sectionIdByNumber,
-  } = useCampaignQuizData(activeCampaignId);
+  } = useCampaignQuizData(activeCampaignId, publicMode);
 
   useEffect(() => {
     if (progress && onProgress) {
