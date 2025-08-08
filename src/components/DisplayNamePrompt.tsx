@@ -43,22 +43,24 @@ export default function DisplayNamePrompt() {
   };
 
   return (
-    <Card variation="elevated" marginBottom="large" padding="large">
-      <Heading level={4} marginBottom="small">
-        Choose a display name
-      </Heading>
-      <form onSubmit={handleSubmit} className={styles.form}>
-        <TextField
-          label="Display name"
-          value={name}
-          onChange={onChange}
-          placeholder="Display name"
-          maxLength={20}
-        />
-        <Button type="submit">Save</Button>
-      </form>
-      {error && <div className={styles.error}>{error}</div>}
-    </Card>
+    <div className={styles.container}>
+      <Card variation="elevated" marginBottom="large" padding="large">
+        <Heading level={4} marginBottom="small">
+          Choose a display name
+        </Heading>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <TextField
+            label="Display name"
+            value={name}
+            onChange={onChange}
+            placeholder="Display name"
+            maxLength={20}
+          />
+          <Button type="submit">Save</Button>
+        </form>
+        {error && <div className={styles.error}>{error}</div>}
+      </Card>
+    </div>
   );
 }
 
