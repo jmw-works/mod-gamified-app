@@ -7,7 +7,6 @@ import {
   useTheme,
   Divider,
   Badge,
-  useAuthenticator,
 } from '@aws-amplify/ui-react';
 import { useEffect, useRef } from 'react';
 import { useProgress } from '../context/ProgressContext';
@@ -37,27 +36,18 @@ export default function UserStatsPanel({ headerHeight, spacing }: UserStatsPanel
     );
   }, [headerHeight, spacing]);
   const { xp, level, title } = useProgress();
-  const {
-    profile,
-    loading: profileLoading,
-    error: profileError,
-  } = useUserProfile();
-  const { user } = useAuthenticator((ctx) => [ctx.user]);
+  const { profile, loading: profileLoading, error: profileError } = useUserProfile();
 
   // Defensive defaults
   const safeXP = Number.isFinite(xp) ? Math.max(0, xp) : 0;
 
-  // Prefer saved display name; fall back to username/email
-  const loginId = user?.signInDetails?.loginId;
+  // Prefer saved display name; fall back to generic labels
   const shownName =
     (typeof profile?.displayName === 'string' && profile.displayName) ||
-    user?.username ||
-    loginId ||
     'Friend';
 
   const email =
     (typeof profile?.email === 'string' && profile.email) ||
-    loginId ||
     'N/A';
 
   // XP calculations

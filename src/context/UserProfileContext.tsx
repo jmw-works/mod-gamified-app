@@ -7,14 +7,13 @@ import {
   useState,
 } from 'react';
 import type { ReactNode } from 'react';
-import type { Schema } from '../../amplify/data/resource';
-import {
-  listUserProfiles,
-  createUserProfile,
-  updateUserProfile,
-} from '../services/userProfileService';
 
-type UserProfileModel = Schema['UserProfile']['type'];
+interface UserProfileModel {
+  id: string;
+  userId: string;
+  email: string | null;
+  displayName: string | null;
+}
 
 interface UserProfileContextValue {
   profile: UserProfileModel | null;
@@ -41,78 +40,40 @@ export function UserProfileProvider({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Load profile for current user with simple localStorage cache
   useEffect(() => {
-    let cancelled = false;
     setError(null);
     const cacheKey = `userProfile:${userId}`;
-
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
-        const parsed = JSON.parse(cached) as UserProfileModel;
-        setProfile(parsed);
+        setProfile(JSON.parse(cached) as UserProfileModel);
         setLoading(false);
+        return;
       } catch {
         localStorage.removeItem(cacheKey);
       }
-    } else {
-      setLoading(true);
     }
-
-    (async () => {
-      try {
-        const res = await listUserProfiles({
-          filter: { userId: { eq: userId } },
-        });
-        const first = (res?.data ?? [])[0] ?? null;
-        if (!cancelled) {
-          setProfile(first);
-          setLoading(false);
-          localStorage.setItem(cacheKey, JSON.stringify(first));
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(e as Error);
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
+    const initial: UserProfileModel = {
+      id: cacheKey,
+      userId,
+      email: email ?? null,
+      displayName: null,
     };
-  }, [userId]);
+    setProfile(initial);
+    setLoading(false);
+    localStorage.setItem(cacheKey, JSON.stringify(initial));
+  }, [userId, email]);
 
   const updateDisplayName = useCallback(
     async (displayName: string) => {
+      const cacheKey = `userProfile:${userId}`;
+      const updated: UserProfileModel = {
+        ...(profile ?? { id: cacheKey, userId, email: email ?? null }),
+        displayName,
+      };
       try {
-        if (profile?.id) {
-        const updated = await updateUserProfile({
-          id: profile.id,
-          displayName,
-        });
-        const updatedProfile =
-          (updated as unknown as { data?: UserProfileModel }).data ??
-          (updated as unknown as UserProfileModel) ??
-          profile;
-          setProfile(updatedProfile);
-          const cacheKey = `userProfile:${userId}`;
-          localStorage.setItem(cacheKey, JSON.stringify(updatedProfile));
-        } else {
-          const created = await createUserProfile({
-            userId,
-            email: email ?? null,
-            displayName,
-          });
-          const createdProfile =
-            (created as unknown as { data?: UserProfileModel }).data ??
-            (created as unknown as UserProfileModel) ??
-            null;
-          setProfile(createdProfile);
-          const cacheKey = `userProfile:${userId}`;
-          localStorage.setItem(cacheKey, JSON.stringify(createdProfile));
-        }
+        localStorage.setItem(cacheKey, JSON.stringify(updated));
+        setProfile(updated);
       } catch (e) {
         setError(e as Error);
         throw e;
@@ -123,11 +84,7 @@ export function UserProfileProvider({
 
   const value: UserProfileContextValue = { profile, loading, error, updateDisplayName };
 
-  return (
-    <UserProfileContext.Provider value={value}>
-      {children}
-    </UserProfileContext.Provider>
-  );
+  return <UserProfileContext.Provider value={value}>{children}</UserProfileContext.Provider>;
 }
 
 export function useUserProfile() {
@@ -138,4 +95,3 @@ export function useUserProfile() {
 }
 
 export default UserProfileContext;
-

@@ -1,7 +1,7 @@
 // src/pages/PublicShell.tsx
 import { Suspense, lazy } from 'react';
 import { ActiveCampaignProvider } from '../context/ActiveCampaignContext';
-import { GuestProgressProvider } from '../context/ProgressContext';
+import { ProgressProvider } from '../context/ProgressContext';
 import { Header as HeaderBar } from '../components/Header';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import Skeleton from '../components/Skeleton';
@@ -16,8 +16,8 @@ interface PublicShellProps {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export default function PublicShell(_props: PublicShellProps) {
   return (
-    <ActiveCampaignProvider>
-      <GuestProgressProvider>
+      <ActiveCampaignProvider>
+        <ProgressProvider userId="guest">
         <div className={styles.shellGrid}>
           <div className={styles.headerArea}>
             <HeaderBar />
@@ -37,8 +37,8 @@ export default function PublicShell(_props: PublicShellProps) {
             </Suspense>
           </div>
         </div>
-      </GuestProgressProvider>
-    </ActiveCampaignProvider>
+        </ProgressProvider>
+      </ActiveCampaignProvider>
   );
 }
 
