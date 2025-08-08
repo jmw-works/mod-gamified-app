@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useContext } from 'react';
 import { listCampaigns, type CampaignSummary } from '../services/contentService';
 import {
   listCampaignProgress,
@@ -7,6 +7,7 @@ import {
 } from '../services/progressService';
 import { ensureSeedData } from '../utils/seedData';
 import { fallbackCampaigns } from '../utils/fallbackContent';
+import ProgressContext from '../context/ProgressContext';
 
 export type UICampaign = {
   id: string;
@@ -23,10 +24,11 @@ export type UICampaign = {
 
 type CampaignRow = CampaignSummary & { icon?: string | null };
 
-export function useCampaigns(userId?: string | null) {
+export function useCampaigns(userId?: string | null, publicMode = false) {
   const [campaigns, setCampaigns] = useState<UICampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setErr] = useState<Error | null>(null);
+  const progress = useContext(ProgressContext);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -36,7 +38,8 @@ export function useCampaigns(userId?: string | null) {
       await ensureSeedData();
 
       // 1) fetch all active campaigns
-      const cRes = await listCampaigns(userId ? 'identityPool' : 'apiKey');
+      const authMode = publicMode || !userId ? 'apiKey' : 'identityPool';
+      const cRes = await listCampaigns(authMode);
 
       let raw: CampaignRow[] = cRes
         .filter((c) => c.isActive !== false)
@@ -44,13 +47,13 @@ export function useCampaigns(userId?: string | null) {
 
       // When no campaigns are returned for unauthenticated users, fall back to
       // locally bundled seed campaigns so the public shell still has content.
-      if (!userId && raw.length === 0) {
+      if ((publicMode || !userId) && raw.length === 0) {
         raw = fallbackCampaigns as CampaignRow[];
       }
 
       // 2) fetch user campaign progress
       const completedIds = new Set<string>();
-      if (userId) {
+      if (!publicMode && userId) {
         const pRes = await listCampaignProgress({
           filter: { userId: { eq: userId } },
           selectionSet: ['id', 'campaignId', 'completed'],
@@ -59,6 +62,8 @@ export function useCampaigns(userId?: string | null) {
         for (const row of pRes.data ?? []) {
           if (row.completed) completedIds.add(row.campaignId);
         }
+      } else {
+        progress?.completedCampaigns.forEach((id) => completedIds.add(id));
       }
 
       // 3) derive locked/unlocked based on order + completions
@@ -91,7 +96,7 @@ export function useCampaigns(userId?: string | null) {
       setCampaigns(ui);
     } catch (e) {
       console.error('Error loading campaigns', e);
-      if (!userId) {
+      if (publicMode || !userId) {
         const ui: UICampaign[] = fallbackCampaigns.map((c, i) => ({
           id: c.id,
           title: c.title,
@@ -111,7 +116,7 @@ export function useCampaigns(userId?: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, publicMode, progress?.completedCampaigns]);
 
   useEffect(() => {
     load();
@@ -126,7 +131,7 @@ export function useCampaigns(userId?: string | null) {
   }, [load]);
 
   const markCampaignCompleted = useCallback(async (campaignId: string) => {
-    if (!userId) return;
+    if (!userId || publicMode) return;
     try {
       const list = await listCampaignProgress({
         filter: { userId: { eq: userId }, campaignId: { eq: campaignId } },
@@ -147,7 +152,7 @@ export function useCampaigns(userId?: string | null) {
       console.error('Error marking campaign completed', e);
       setErr(e as Error);
     }
-  }, [userId, load]);
+  }, [userId, publicMode, load]);
 
   return { campaigns, loading, error, refresh: load, markCampaignCompleted };
 }
