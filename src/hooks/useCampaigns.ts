@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { listCampaigns } from '../services/campaignService';
+import { listCampaigns, type CampaignSummary } from '../services/contentService';
 import {
   listCampaignProgress,
   createCampaignProgress,
@@ -21,16 +21,7 @@ export type UICampaign = {
   icon?: string | null;
 };
 
-type CampaignRow = {
-  id: string;
-  title: string;
-  description?: string | null;
-  thumbnailUrl?: string | null;
-  infoText?: string | null;
-  order?: number | null;
-  isActive?: boolean | null;
-  icon?: string | null;
-};
+type CampaignRow = CampaignSummary & { icon?: string | null };
 
 export function useCampaigns(userId?: string | null) {
   const [campaigns, setCampaigns] = useState<UICampaign[]>([]);
@@ -45,13 +36,9 @@ export function useCampaigns(userId?: string | null) {
       await ensureSeedData();
 
       // 1) fetch all active campaigns
-      const cRes = await listCampaigns({
-        filter: { isActive: { eq: true } },
-        selectionSet: ['id', 'title', 'description', 'thumbnailUrl', 'order', 'isActive', 'infoText'],
-        authMode: userId ? 'identityPool' : 'apiKey', // TODO: re-enable auth gating
-      });
+      const cRes = await listCampaigns(userId ? 'identityPool' : 'apiKey');
 
-      let raw: CampaignRow[] = (cRes.data ?? [])
+      let raw: CampaignRow[] = cRes
         .filter((c) => c.isActive !== false)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -75,9 +62,9 @@ export function useCampaigns(userId?: string | null) {
       }
 
       // 3) derive locked/unlocked based on order + completions
-      const ordered = raw.map(r => ({
+      const ordered = raw.map((r) => ({
         id: r.id,
-        title: r.title,
+        title: r.title ?? '',
         description: r.description ?? null,
         thumbnailUrl: r.thumbnailUrl ?? null,
         infoText: r.infoText ?? null,

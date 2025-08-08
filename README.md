@@ -2,6 +2,21 @@
 
 This project uses AWS Amplify Gen2 with React and TypeScript to deliver a gamified learning experience.
 
+## Content model
+
+Campaign, section, and question data now live in a single **CampaignContent** table.
+Each row specifies its role via `itemType` (`CAMPAIGN`, `SECTION`, or `QUESTION`).
+
+Ordering is deterministic:
+
+- Campaigns sort by `campaignOrder` then `itemOrder`.
+- Sections sort by `sectionNumber` then `itemOrder`.
+- Questions sort by `itemOrder` within their section.
+
+To extend content, add new rows with matching `campaignSlug` and the appropriate
+ordering fields. A helper script `scripts/quickSeed.ts` shows how to seed an
+entire campaign in one pass.
+
 ## Public vs Authenticated Access
 
 - Guests read seeded **Campaign**, **Section**, and **Question** data via the identity pool (`authMode: 'identityPool'`). Only Campaign 1 / Section 1 is unlocked.

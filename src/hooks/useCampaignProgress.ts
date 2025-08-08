@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { listSections } from '../services/sectionService';
+import { client } from '../services/client';
 import { listSectionProgress } from '../services/progressService';
 import { ensureSeedData } from '../utils/seedData';
 
@@ -18,11 +18,15 @@ export function useCampaignProgress(userId?: string | null) {
     setError(null);
     try {
       await ensureSeedData();
-      const sectionRes = await listSections({ selectionSet: ['id', 'campaignId'], authMode: 'identityPool' });
+      const sectionRes = await client.models.CampaignContent.list({
+        filter: { itemType: { eq: 'SECTION' } },
+        selectionSet: ['id', 'campaignSlug', 'sectionNumber'],
+        authMode: 'identityPool',
+      });
       const totals: Record<string, number> = {};
       const sectionToCampaign: Record<string, string> = {};
       for (const s of sectionRes.data ?? []) {
-        const cid = s.campaignId as string;
+        const cid = s.campaignSlug as string;
         if (!cid) continue;
         totals[cid] = (totals[cid] ?? 0) + 1;
         sectionToCampaign[s.id] = cid;
