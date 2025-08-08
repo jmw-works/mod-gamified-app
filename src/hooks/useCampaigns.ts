@@ -6,6 +6,7 @@ import {
   updateCampaignProgress,
 } from '../services/progressService';
 import { ensureSeedData } from '../utils/seedData';
+import { fallbackCampaigns } from '../utils/fallbackContent';
 
 export type UICampaign = {
   id: string;
@@ -17,6 +18,17 @@ export type UICampaign = {
   isActive: boolean;
   locked: boolean;      // derived for UI
   completed: boolean;   // derived from CampaignProgress
+  icon?: string | null;
+};
+
+type CampaignRow = {
+  id: string;
+  title: string;
+  description?: string | null;
+  thumbnailUrl?: string | null;
+  infoText?: string | null;
+  order?: number | null;
+  isActive?: boolean | null;
   icon?: string | null;
 };
 
@@ -39,9 +51,15 @@ export function useCampaigns(userId?: string | null) {
         authMode: 'identityPool',
       });
 
-      const raw = (cRes.data ?? [])
+      let raw: CampaignRow[] = (cRes.data ?? [])
         .filter((c) => c.isActive !== false)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+      // When no campaigns are returned for unauthenticated users, fall back to
+      // locally bundled seed campaigns so the public shell still has content.
+      if (!userId && raw.length === 0) {
+        raw = fallbackCampaigns as CampaignRow[];
+      }
 
       // 2) fetch user campaign progress
       const completedIds = new Set<string>();
@@ -86,7 +104,23 @@ export function useCampaigns(userId?: string | null) {
       setCampaigns(ui);
     } catch (e) {
       console.error('Error loading campaigns', e);
-      setErr(e as Error);
+      if (!userId) {
+        const ui: UICampaign[] = fallbackCampaigns.map((c, i) => ({
+          id: c.id,
+          title: c.title,
+          description: c.description ?? null,
+          thumbnailUrl: null,
+          infoText: c.infoText ?? null,
+          order: c.order,
+          isActive: true,
+          locked: i !== 0,
+          completed: false,
+          icon: c.icon ?? null,
+        }));
+        setCampaigns(ui);
+      } else {
+        setErr(e as Error);
+      }
     } finally {
       setLoading(false);
     }

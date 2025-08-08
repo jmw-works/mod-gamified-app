@@ -31,7 +31,7 @@ export default function PublicShell({ onRequireAuth }: PublicShellProps) {
           </div>
           <div className={styles.canvasArea}>
             <Suspense fallback={<Skeleton height="200px" />}>
-              <CampaignCanvas onRequireAuth={onRequireAuth} />
+              <CampaignCanvas onRequireAuth={onRequireAuth} publicMode />
             </Suspense>
           </div>
         </div>
