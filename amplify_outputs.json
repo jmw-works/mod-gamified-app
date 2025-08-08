@@ -1,9 +1,9 @@
 {
   "auth": {
-    "user_pool_id": "us-west-1_LaQBSvDPw",
+    "user_pool_id": "us-west-1_8St19oHxP",
     "aws_region": "us-west-1",
-    "user_pool_client_id": "7u81oha9p0krjvd3vi74j97ffu",
-    "identity_pool_id": "us-west-1:b999690f-15cc-4641-a401-710af4b3dc8a",
+    "user_pool_client_id": "17boj86a20kr549lbq365sud06",
+    "identity_pool_id": "us-west-1:dc1cc440-6d1c-4d6d-adda-c905ce08065d",
     "mfa_methods": [],
     "standard_required_attributes": [
       "email"
@@ -26,7 +26,7 @@
     "unauthenticated_identities_enabled": true
   },
   "data": {
-    "url": "https://wr7wrxru7vcnngqktkf75gzn4y.appsync-api.us-west-1.amazonaws.com/graphql",
+    "url": "https://qk2qtujy6ndq3knpjvf56vgtyq.appsync-api.us-west-1.amazonaws.com/graphql",
     "aws_region": "us-west-1",
     "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
@@ -161,9 +161,29 @@
               "properties": {
                 "rules": [
                   {
+                    "allow": "public",
+                    "provider": "iam",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
                     "allow": "private",
                     "operations": [
                       "read"
+                    ]
+                  },
+                  {
+                    "groupClaim": "cognito:groups",
+                    "provider": "userPools",
+                    "allow": "groups",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete"
+                    ],
+                    "groups": [
+                      "admin"
                     ]
                   }
                 ]
@@ -319,9 +339,29 @@
               "properties": {
                 "rules": [
                   {
+                    "allow": "public",
+                    "provider": "iam",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
                     "allow": "private",
                     "operations": [
                       "read"
+                    ]
+                  },
+                  {
+                    "groupClaim": "cognito:groups",
+                    "provider": "userPools",
+                    "allow": "groups",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete"
+                    ],
+                    "groups": [
+                      "admin"
                     ]
                   }
                 ]
@@ -484,9 +524,29 @@
               "properties": {
                 "rules": [
                   {
+                    "allow": "public",
+                    "provider": "iam",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
                     "allow": "private",
                     "operations": [
                       "read"
+                    ]
+                  },
+                  {
+                    "groupClaim": "cognito:groups",
+                    "provider": "userPools",
+                    "allow": "groups",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete"
+                    ],
+                    "groups": [
+                      "admin"
                     ]
                   }
                 ]
@@ -560,9 +620,29 @@
               "properties": {
                 "rules": [
                   {
+                    "allow": "public",
+                    "provider": "iam",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
                     "allow": "private",
                     "operations": [
                       "read"
+                    ]
+                  },
+                  {
+                    "groupClaim": "cognito:groups",
+                    "provider": "userPools",
+                    "allow": "groups",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete"
+                    ],
+                    "groups": [
+                      "admin"
                     ]
                   }
                 ]
@@ -1226,5 +1306,5 @@
       "nonModels": {}
     }
   },
-  "version": "1.3"
+  "version": "1.4"
 }
