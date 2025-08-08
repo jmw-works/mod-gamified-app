@@ -8,6 +8,8 @@ import {
 import { ensureSeedData } from '../utils/seedData';
 import { fallbackCampaigns } from '../utils/fallbackContent';
 import ProgressContext from '../context/ProgressContext';
+import { AUTH_DISABLED } from '../config/runtime';
+import { canUnlock } from '../domain/progression';
 
 export type UICampaign = {
   id: string;
@@ -30,6 +32,8 @@ export function useCampaigns(userId?: string | null, publicMode = false) {
   const [error, setErr] = useState<Error | null>(null);
   const progress = useContext(ProgressContext);
 
+  const usePublic = publicMode || AUTH_DISABLED || !userId;
+
   const load = useCallback(async () => {
     setLoading(true);
     setErr(null);
@@ -38,7 +42,7 @@ export function useCampaigns(userId?: string | null, publicMode = false) {
       await ensureSeedData();
 
       // 1) fetch all active campaigns
-      const authMode = publicMode || !userId ? 'apiKey' : 'identityPool';
+      const authMode = usePublic ? 'apiKey' : 'identityPool';
       const cRes = await listCampaigns(authMode);
 
       let raw: CampaignRow[] = cRes
@@ -47,13 +51,13 @@ export function useCampaigns(userId?: string | null, publicMode = false) {
 
       // When no campaigns are returned for unauthenticated users, fall back to
       // locally bundled seed campaigns so the public shell still has content.
-      if ((publicMode || !userId) && raw.length === 0) {
+      if (usePublic && raw.length === 0) {
         raw = fallbackCampaigns as CampaignRow[];
       }
 
       // 2) fetch user campaign progress
       const completedIds = new Set<string>();
-      if (!publicMode && userId) {
+      if (!usePublic && userId) {
         const pRes = await listCampaignProgress({
           filter: { userId: { eq: userId } },
           selectionSet: ['id', 'campaignId', 'completed'],
@@ -65,7 +69,6 @@ export function useCampaigns(userId?: string | null, publicMode = false) {
       } else {
         progress?.completedCampaigns.forEach((id) => completedIds.add(id));
       }
-
       // 3) derive locked/unlocked based on order + completions
       const ordered = raw.map((r) => ({
         id: r.id,
@@ -77,26 +80,19 @@ export function useCampaigns(userId?: string | null, publicMode = false) {
         isActive: r.isActive !== false,
       }));
 
-      const unlocked: boolean[] = [];
-      const isCompleted: boolean[] = [];
-      ordered.forEach((c, idx) => {
-        const prevAllCompleted = idx === 0
-          ? true
-          : ordered.slice(0, idx).every(x => completedIds.has(x.id));
-        unlocked.push(prevAllCompleted);
-        isCompleted.push(completedIds.has(c.id));
-      });
+      const orderedIds = ordered.map((c) => c.id);
+      const unlocked = orderedIds.map((id) => canUnlock(id, completedIds, orderedIds));
 
       const ui: UICampaign[] = ordered.map((c, i) => ({
         ...c,
         locked: !unlocked[i],
-        completed: isCompleted[i],
+        completed: completedIds.has(c.id),
       }));
 
       setCampaigns(ui);
     } catch (e) {
       console.error('Error loading campaigns', e);
-      if (publicMode || !userId) {
+      if (usePublic) {
         const ui: UICampaign[] = fallbackCampaigns.map((c, i) => ({
           id: c.id,
           title: c.title,
@@ -116,7 +112,7 @@ export function useCampaigns(userId?: string | null, publicMode = false) {
     } finally {
       setLoading(false);
     }
-  }, [userId, publicMode, progress?.completedCampaigns]);
+  }, [userId, usePublic, progress?.completedCampaigns]);
 
   useEffect(() => {
     load();
@@ -131,7 +127,11 @@ export function useCampaigns(userId?: string | null, publicMode = false) {
   }, [load]);
 
   const markCampaignCompleted = useCallback(async (campaignId: string) => {
-    if (!userId || publicMode) return;
+    if (usePublic || !userId) {
+      await progress?.markCampaignComplete(campaignId);
+      await load();
+      return;
+    }
     try {
       const list = await listCampaignProgress({
         filter: { userId: { eq: userId }, campaignId: { eq: campaignId } },
@@ -152,7 +152,7 @@ export function useCampaigns(userId?: string | null, publicMode = false) {
       console.error('Error marking campaign completed', e);
       setErr(e as Error);
     }
-  }, [userId, publicMode, load]);
+  }, [userId, usePublic, load, progress]);
 
   return { campaigns, loading, error, refresh: load, markCampaignCompleted };
 }

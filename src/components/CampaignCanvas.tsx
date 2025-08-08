@@ -6,6 +6,8 @@ import { useCampaignQuizData } from '../hooks/useCampaignQuizData';
 import { useActiveCampaign } from '../context/ActiveCampaignContext';
 import type { Progress } from '../types/ProgressTypes';
 import { createEmptyProgress } from '../types/ProgressTypes';
+import { canUnlock } from '../domain/progression';
+import { AUTH_DISABLED } from '../config/runtime';
 
 interface Props {
   displayName?: string;
@@ -85,6 +87,7 @@ export default function CampaignCanvas({
   const promptedAuth = useRef(false);
   useEffect(() => {
     if (
+      AUTH_DISABLED ||
       promptedAuth.current ||
       !onRequireAuth ||
       activeCampaignId !== 'campaign-1'
@@ -120,12 +123,13 @@ export default function CampaignCanvas({
 
   return (
     <>
-      {orderedSectionNumbers.map((sectionNum, idx) => {
+      {orderedSectionNumbers.map((sectionNum) => {
         const questionsInSection = groupedBySection.get(sectionNum) ?? [];
-        const isLocked =
-          !safeProgress.completedSections.includes(sectionNum) &&
-          sectionNum !== orderedSectionNumbers[0] &&
-          !safeProgress.completedSections.includes(orderedSectionNumbers[idx - 1]);
+        const isLocked = !canUnlock(
+          sectionNum,
+          safeProgress.completedSections,
+          orderedSectionNumbers,
+        );
         const answeredCount = questionsInSection.filter((q) =>
           safeProgress.answeredQuestions.includes(q.id)
         ).length;

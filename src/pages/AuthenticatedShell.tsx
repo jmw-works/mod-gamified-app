@@ -15,6 +15,7 @@ import { ActiveCampaignProvider } from '../context/ActiveCampaignContext';
 import { UserProfileProvider } from '../context/UserProfileContext';
 import DisplayNamePrompt from '../components/DisplayNamePrompt';
 import './AuthenticatedShell.css';
+import { AUTH_DISABLED } from '../config/runtime';
 
 export default function AuthenticatedShell() {
   const [userId] = useState(() => {
@@ -48,13 +49,13 @@ export default function AuthenticatedShell() {
 
             <div className="auth-gallery">
               <Suspense fallback={<Skeleton height="180px" />}>
-                <CampaignGallery publicMode />
+                <CampaignGallery publicMode={AUTH_DISABLED} />
               </Suspense>
             </div>
 
             <div className="auth-canvas">
               <Suspense fallback={<Skeleton height="200px" />}>
-                <CampaignCanvas publicMode />
+                <CampaignCanvas publicMode={AUTH_DISABLED} />
               </Suspense>
             </div>
 
