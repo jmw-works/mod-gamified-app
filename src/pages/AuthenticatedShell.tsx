@@ -48,13 +48,13 @@ export default function AuthenticatedShell() {
 
             <div className="auth-gallery">
               <Suspense fallback={<Skeleton height="180px" />}>
-                <CampaignGallery />
+                <CampaignGallery publicMode />
               </Suspense>
             </div>
 
             <div className="auth-canvas">
               <Suspense fallback={<Skeleton height="200px" />}>
-                <CampaignCanvas />
+                <CampaignCanvas publicMode />
               </Suspense>
             </div>
 

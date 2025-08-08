@@ -8,7 +8,6 @@ import { useCampaignThumbnail } from '../hooks/useCampaignThumbnail';
 import ProgressContext from '../context/ProgressContext';
 import Skeleton from './Skeleton';
 import ProgressBar from './ProgressBar';
-import { useCampaignProgress } from '../hooks/useCampaignProgress';
 import { useUserProfile } from '../context/UserProfileContext';
 
 
@@ -78,15 +77,18 @@ function CampaignCardView({
   );
 }
 
-function CampaignGalleryInner() {
+interface CampaignGalleryProps {
+  publicMode?: boolean;
+}
+
+function CampaignGalleryInner({ publicMode = false }: CampaignGalleryProps) {
   const { profile } = useUserProfile();
   const userId = profile?.userId;
-  const { campaigns, loading, error, refresh } = useCampaigns(userId);
+  const { campaigns, loading, error, refresh } = useCampaigns(userId, publicMode);
   const { activeCampaignId, setActiveCampaignId } = useActiveCampaign();
   const progress = useContext(ProgressContext);
   const completedCampaigns = progress?.completedCampaigns;
   const galleryRef = useRef<HTMLDivElement>(null);
-  const { progress: campaignProgress, refresh: refreshCampaignProgress } = useCampaignProgress(userId);
 
   const scrollBy = (offset: number) => {
     galleryRef.current?.scrollBy({ left: offset, behavior: 'smooth' });
@@ -101,10 +103,6 @@ function CampaignGalleryInner() {
       refresh();
     }
   }, [completedCampaigns, refresh]);
-
-  useEffect(() => {
-    refreshCampaignProgress();
-  }, [progress?.completedSections.length, progress?.answeredQuestions.length, refreshCampaignProgress]);
 
   // Ensure active campaign is set to the first unlocked campaign
   useEffect(() => {
@@ -157,7 +155,11 @@ function CampaignGalleryInner() {
             c={c}
             active={c.id === activeCampaignId}
             onClick={() => !c.locked && setActiveCampaignId(c.id)}
-            progress={campaignProgress[c.id]}
+            progress={
+              completedCampaigns?.includes(c.id)
+                ? { completed: 1, total: 1 }
+                : undefined
+            }
           />
         ))}
       </div>
